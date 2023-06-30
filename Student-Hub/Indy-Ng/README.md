@@ -19,5 +19,5 @@ For dev work:
 
 - Remember to run the following command in your virtual environment (it'll save installed packages used in dev work)
 ```
-py -m pip freeze > requirement.txt
+py -m pip freeze > requirements.txt
 ```
