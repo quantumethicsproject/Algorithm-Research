@@ -11,6 +11,7 @@ from pennylane import Identity, PauliX, PauliY, PauliZ
 
 pauli_dict = {"I": Identity.compute_matrix(), "X": PauliX.compute_matrix(), "Y": PauliY.compute_matrix(), "Z": PauliZ.compute_matrix()}
 
+
 def A_to_num (n_qubits: int, coefs: np.tensor, terms: List[str]):
     
     if len(coefs) != len(terms):
@@ -37,11 +38,72 @@ def A_to_num (n_qubits: int, coefs: np.tensor, terms: List[str]):
         
     return mat
 
+def generate_weights(n_qubits:int, layers:int, q_delta:float):
+    if n_qubits <= 0:
+        raise ValueError("Number of qubits is not a number greater than 0.")
+    
+    if layers < 0:
+        raise ValueError("Number of layers is not a number greater than or equal to 0.")
+    
+    dimension = 0
+
+    # For fixed layered structure, always need one layer of rotations
+    dimension += n_qubits
+
+    # Checks if n_qubits is odd or even
+    check_odd = n_qubits % 2
+
+    # If n_qubits is even, each layer adds on (n_qubits + (n_qubits - 2)) weights
+    # If n_qubits is odd, each layer adds on 2*(n_qubits - 1)
+    if check_odd == False:
+        dimension += layers*(n_qubits + (n_qubits - 2))
+    else:
+        dimension += layers*(2*(n_qubits - 1))
+
+    return q_delta * np.random.rand(dimension, requires_grad = True)
+
+
+def generate_Two_Design(n_qubits:int, layers:int, q_delta:float):
+    if n_qubits <= 0:
+        raise ValueError("Number of qubits is not a number greater than 0.")
+    
+    if layers < 0:
+        raise ValueError("Number of layers is not a number greater than or equal to 0.")
+    
+    init_dimension = 0
+    dimension = 0
+
+    # For fixed layered structure, always need one layer of rotations
+    init_dimension += n_qubits
+
+    # Checks if n_qubits is odd or even
+    check_odd = n_qubits % 2
+
+    # If n_qubits is even, each layer adds on (n_qubits + (n_qubits - 2)) weights
+    # If n_qubits is odd, each layer adds on 2*(n_qubits - 1)
+    if check_odd == False:
+        dimension += layers*(n_qubits + (n_qubits - 2))
+    else:
+        dimension += layers*(2*(n_qubits - 1))
+
+    init_weight_array = q_delta * np.random.randn(init_dimension, requires_grad = True)
+    weight_array = q_delta * np.random.randn(dimension, requires_grad = True)
+
+    return qml.SimplifiedTwoDesign(initial_layer_weights = init_weight_array, weights = weight_array, wires = range(n_qubits))
+
+
+
+
+
+
+#def b_to_num (n_qubits: int, terms: List(str)):
+
+
 
 # This function technically works BUT needs to be tested + optimized further
 
 def A_to_code (idx, ancilla_idx, terms: List[str]):
-        
+
     if idx < 0:
         raise ValueError("Index of linear combination must be >= 0.")
     
