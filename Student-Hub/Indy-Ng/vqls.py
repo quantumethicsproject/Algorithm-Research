@@ -63,6 +63,7 @@ def generate_weights(n_qubits:int, layers:int, q_delta:float):
     return q_delta * np.random.rand(dimension, requires_grad = True)
 
 
+# AHHHHH this code generates a two-design but doesn't work with current workflow :c
 def generate_Two_Design(n_qubits:int, layers:int, q_delta:float):
     if n_qubits <= 0:
         raise ValueError("Number of qubits is not a number greater than 0.")
