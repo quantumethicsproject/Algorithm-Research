@@ -2,6 +2,7 @@
 import pennylane as qml
 from pennylane import numpy as np
 from pennylane.optimize import NesterovMomentumOptimizer
+import pandas as pd
 
 # define the device
 dev = qml.device("default.qubit", wires=4)
@@ -64,4 +65,9 @@ def cost(weights, bias, X, Y):
 
 # load the data
 column_names = ["radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity", "concave points", "symmetry", "fractal dimension"]
+
+data_list =[]
+file = "wdbc.data"
+df = pd.read_csv(file, names = column_names)
+print(df)
 
