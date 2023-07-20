@@ -3,12 +3,25 @@ import pennylane as qml
 from pennylane import numpy as np
 from pennylane.optimize import NesterovMomentumOptimizer
 import pandas as pd
+import math
 
 # TODO: Determine appropriate amount of qubits to use for CANCER dataset
 # Read: State Preparation section of paper
-# n_qubits = ?
+
+def numQubits(data):
+    numObvs = data.shape[0] * data.shape[1]
+    # find the ceiling of the log of numObvs
+    # this is the number of qubits needed
+    return math.ceil(math.log(numObvs, 2))
 
 # TODO: Implement non-informative padding procedure described in paper
+def padData(data, n_qubits):
+    # find the number of 0s to pad with
+    numZeros = 2 ** n_qubits - data.shape[0]
+    # create array of 0s
+    zeros = np.zeros((numZeros, data.shape[1]))
+    # concatenate data and zeros
+    return np.concatenate((data, zeros))
 
 # define the device
 dev = qml.device("default.qubit", wires=4)
@@ -27,6 +40,9 @@ col_names = ["ID", "diagnosis", "radius", "texture", "perimeter", "area", "smoot
 data = pd.read_csv(path, names=col_names)
 data.head()
 data = data.to_numpy()
+
+n_qubits = numQubits(data)
+data = padData(data, n_qubits)
 
 
 #### Everything below this is from tutorial, but isn't necessarily relevant to actual replication of paper
@@ -89,12 +105,3 @@ def accuracy(labels, predictions):
 def cost(weights, bias, X, Y):
     predictions = [variational_classifier(weights, bias, x) for x in X]
     return square_loss(Y, predictions)
-
-# load the data
-column_names = ["radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity", "concave points", "symmetry", "fractal dimension"]
-
-data_list =[]
-file = "wdbc.data"
-df = pd.read_csv(file, names = column_names)
-print(df)
-
