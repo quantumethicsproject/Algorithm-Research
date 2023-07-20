@@ -44,55 +44,25 @@ def generate_weights(n_qubits:int, layers:int, q_delta:float):
     
     if layers < 0:
         raise ValueError("Number of layers is not a number greater than or equal to 0.")
+
+    shapes = qml.SimplifiedTwoDesign.shape(n_layers=layers, n_wires=n_qubits)
+
+    total_weights = [q_delta * np.random.random(size=shape) for shape in shapes]
     
-    dimension = 0
+    init_weights = total_weights[0]
+    weights = total_weights[1]
+    w = np.append(init_weights, np.concatenate(np.concatenate(weights)))
 
-    # For fixed layered structure, always need one layer of rotations
-    dimension += n_qubits
+    return init_weights, weights, w
 
-    # Checks if n_qubits is odd or even
-    check_odd = n_qubits % 2
+def reshape_weights(n_qubits:int, n_parameters:int, layers:int, w):
+    shapes = qml.SimplifiedTwoDesign.shape(n_layers=layers, n_wires=n_qubits)
 
-    # If n_qubits is even, each layer adds on (n_qubits + (n_qubits - 2)) weights
-    # If n_qubits is odd, each layer adds on 2*(n_qubits - 1)
-    if check_odd == False:
-        dimension += layers*(n_qubits + (n_qubits - 2))
-    else:
-        dimension += layers*(2*(n_qubits - 1))
-
-    return q_delta * np.random.rand(dimension, requires_grad = True)
+    init_weights = w[0:n_qubits]
+    weights = np.reshape(w[n_qubits:n_parameters], shapes[1])
 
 
-def generate_Two_Design(n_qubits:int, layers:int, q_delta:float):
-    if n_qubits <= 0:
-        raise ValueError("Number of qubits is not a number greater than 0.")
-    
-    if layers < 0:
-        raise ValueError("Number of layers is not a number greater than or equal to 0.")
-    
-    init_dimension = 0
-    dimension = 0
-
-    # For fixed layered structure, always need one layer of rotations
-    init_dimension += n_qubits
-
-    # Checks if n_qubits is odd or even
-    check_odd = n_qubits % 2
-
-    # If n_qubits is even, each layer adds on (n_qubits + (n_qubits - 2)) weights
-    # If n_qubits is odd, each layer adds on 2*(n_qubits - 1)
-    if check_odd == False:
-        dimension += layers*(n_qubits + (n_qubits - 2))
-    else:
-        dimension += layers*(2*(n_qubits - 1))
-
-    init_weight_array = q_delta * np.random.randn(init_dimension, requires_grad = True)
-    weight_array = q_delta * np.random.randn(dimension, requires_grad = True)
-
-    return qml.SimplifiedTwoDesign(initial_layer_weights = init_weight_array, weights = weight_array, wires = range(n_qubits))
-
-
-
+    return init_weights, weights
 
 
 
