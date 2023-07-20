@@ -90,3 +90,11 @@ def cost(weights, bias, X, Y):
     predictions = [variational_classifier(weights, bias, x) for x in X]
     return square_loss(Y, predictions)
 
+# load the data
+column_names = ["radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity", "concave points", "symmetry", "fractal dimension"]
+
+data_list =[]
+file = "wdbc.data"
+df = pd.read_csv(file, names = column_names)
+print(df)
+
