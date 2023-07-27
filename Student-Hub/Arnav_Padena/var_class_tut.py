@@ -15,6 +15,7 @@ def numQubits(data):
     return math.ceil(math.log(numObvs, 2))
 
 # TODO: Implement non-informative padding procedure described in paper
+# This isn't necessary - see AmplitudeEmbedding class  
 def padData(data, n_qubits):
     # find the number of 0s to pad with
     numZeros = 2 ** n_qubits - data.shape[0]
@@ -23,11 +24,17 @@ def padData(data, n_qubits):
     # concatenate data and zeros
     return np.concatenate((data, zeros))
 
-# define the device
-dev = qml.device("default.qubit", wires=4)
+
 
 # TODO: Implement Amplitude Encoding using Pennylane
 
+
+@qml.qnode(dev)
+def amplitude_embedding_circuit(features):
+    qml.AmplitudeEmbedding(features, pad_with=0, normalize=True, wires=range(n_qubits))
+    return qml.state()
+
+circuit(data[:,3])
 
 # Load the data
 path = './wdbc.data'
@@ -42,6 +49,10 @@ data.head()
 data = data.to_numpy()
 
 n_qubits = numQubits(data)
+
+# define the device
+dev = qml.device("default.qubit", wires=n_qubits)
+
 data = padData(data, n_qubits)
 
 
