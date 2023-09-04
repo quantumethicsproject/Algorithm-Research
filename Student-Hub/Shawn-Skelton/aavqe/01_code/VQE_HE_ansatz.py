@@ -16,8 +16,8 @@ import os.path
 #Hdata = qml.data.load("qchem", molname="H2", basis="STO-3G", bondlength=1.1)
 #print(Hdata['fci_energy'])
 
-#part = qml.data.load("qchem", molname="H2", basis="STO-3G", bondlength=1.1, attributes=["molecule", "fci_energy"])[0]
-#part.molecule
+part = qml.data.load("qchem", molname="H2", basis="STO-3G", bondlength=1.1, attributes=["molecule", "fci_energy"])[0]
+part.molecule
 
 d=1
 ctol=1.6*10**(-3)
@@ -194,7 +194,7 @@ interd0=0.1
 interd1=4
 numpoints=1
 iad_array=np.linspace(interd0,interd1, numpoints)
-theta0 =np.array(0.0, requires_grad=True)
+theta0 =np.array(0.1, requires_grad=True)
 params0=np.array([theta0]*(3*d*qubits+2*qubits))
 
 ###MAIN LOOP: solve the VQE for each interatomic distance, using Pennylane's demo and the Kandala approach

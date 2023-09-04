@@ -11,14 +11,14 @@ import numpy as np
 import os.path
 
 #filename='H_net_data.pkl'
-numpoints=5
+numpoints=1
 file_name='kandala_H2_'+str(numpoints)+'_iads'   
 
 
 ####Path info: CHANGE TO PATH LOCATION THE AAVQE FOLDER IS SAVED
-
-data_path = 'C:/Users/Shawn Skelton/Documents/AAVQE/03_data'
-figure_path= 'C:/Users/Shawn Skelton/Documents/AAVQE/02_figures'
+script_path = os.path.abspath(__file__)
+data_path = script_path.replace("01_code\VQE_plots.py", "03_data") #'C:/Users/Shawn Skelton/Documents/AAVQE/03_data'
+figure_path= script_path.replace("01_code\VQE_plots.py", "02_data") #'C:/Users/Shawn Skelton/Documents/AAVQE/02_figures'
 
 data_name=os.path.join(data_path, file_name+'.pkl')   
 figure_name = os.path.join(figure_path, file_name+'.pdf')    
@@ -30,7 +30,7 @@ with open(data_name, 'rb') as manage_file:
 #{'n':[], 'angle':[], 'energy':[], 't': [], 
 #'s': [], 'ns':[], 'sangle':[], 'senergy':[], 'ts':[]}
 
-def HEVCE_TO_VQE_PLOTS(data, ifsave=False, figname=figure_name):
+def HEVQE_TO_VQE_PLOTS(data, ifsave=False, figname=figure_name):
     kenergy=data['kenergy']
     kits=data['kits']
     ktimes=data['ktimes']
@@ -85,11 +85,10 @@ def HEVCE_TO_VQE_PLOTS(data, ifsave=False, figname=figure_name):
         plt.savefig(figname)
     return
     
-    
-
+     
 def AAVQE_to_VQE_plots(data):
     ###grab all the data
-    E_fci = -1.136189454088
+    #E_fci = -1.136189454088
     sarray=np.linspace(0, 1, data['s'])
     senergy=data['senergy']
     sangle=data['sangle']
@@ -133,5 +132,55 @@ def AAVQE_to_VQE_plots(data):
     plt.show()
     return
     
+def AAVQE_SINGLE_H_COMP_PLOTS(data):
+    """assumes we're comparing one Hamiltonian to another"""
+    ssteps=data['ssteps']
+    sarray=np.linspace(0, 1, ssteps) 
+    senergy=data['senergy']
+    GSE=data['GSE']
 
-HEVCE_TO_VQE_PLOTS(data, ifsave=True, figname=figure_name)
+    kn=data['kits'][0]
+    sn=data['sits']
+    svargdict=data['s_vars']
+    kvarg=data['k_vars']
+    
+    ###Plots
+    fig=plt.figure()
+    fig.set_figheight(5)
+    fig.set_figwidth(18)
+
+    # Add energy plot on column 1
+    ax1 = fig.add_subplot(131)
+    ax1.plot(sarray, senergy, "go", ls="dashed")
+    ax1.set_xlabel("Adiobatic step s", fontsize=13)
+    ax1.set_ylabel("Energy (Hartree)", fontsize=13)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+
+    #Add angle plot on column 2
+    ax2 = fig.add_subplot(132)
+    ax2.plot(sarray, sn, "go", ls="dashed", label='Adiobatic its')
+    ax2.set_xlabel("Adiobatic step s", fontsize=13)
+    ax2.set_ylabel("iterations to solution", fontsize=13)
+    ax2.plot([1], kn,label='HEA its' )
+    ax2.legend()
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    
+    ax3 = fig.add_subplot(133)
+    for sind, sit in enumerate(sarray):
+        svarg=svargdict["sit_is_"+str(sit)]
+        print(svarg)
+        sitmax=len(svarg)
+        ax3.plot(np.linspace(0, sitmax, sitmax+1),svarg, label=r'$s=$'+str(sit))
+
+    ax3.plot(np.linspace(0, kn, kn+1) ,kvarg , ls="dashed")
+    ax3.set_xlabel("iteration", fontsize=13)
+    ax3.set_ylabel("variance", fontsize=13)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.subplots_adjust(wspace=0.3, bottom=0.2)
+    plt.show()
+#HEVQE_TO_VQE_PLOTS(data, ifsave=True, figname=figure_name)
+
+AAVQE_SINGLE_H_COMP_PLOTS(data)
