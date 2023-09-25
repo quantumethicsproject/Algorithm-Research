@@ -13,6 +13,7 @@ import time
 import pickle
 import os.path
 
+import matplotlib.pyplot
 
 ####constants
 ifsave=True
