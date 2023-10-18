@@ -1,1 +1,3 @@
 VQLSvenv
+.venv
+__pycache__
