@@ -13,7 +13,14 @@ pauli_dict = {"I": Identity.compute_matrix(), "X": PauliX.compute_matrix(), "Y":
 
 
 def A_to_num (n_qubits: int, coefs: np.tensor, terms: List[str]):
-    
+    """
+    Given an array of coeffs c and an array of A_l formatted as a list of strings, return A
+    @params
+    coefs (eg. [1, 0.2, 0.2])
+    terms (eg. ["III", "XZI", "XII"])
+
+    returns an np.array
+    """    
     if len(coefs) != len(terms):
         raise ValueError("Number of coefficients does not match number of terms.")
     
@@ -65,9 +72,12 @@ def reshape_weights(n_qubits:int, n_parameters:int, layers:int, w):
     return init_weights, weights
 
 
+dev = qml.device("default.qubit", wires=n_qubits)
 
-#def b_to_num (n_qubits: int, terms: List(str)):
-
+@qml.qnode(dev)
+def b_to_num():
+    U_b()
+    return qml.state()
 
 
 # This function technically works BUT needs to be tested + optimized further
