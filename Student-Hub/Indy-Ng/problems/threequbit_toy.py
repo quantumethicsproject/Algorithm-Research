@@ -1,8 +1,9 @@
 import pennylane as qml
 from hyperparameters import *
 from pennylane import numpy as np
+from problem_base import Problem
 
-class IndysProblem:
+class IndysProblem(Problem):
     # TODO: after creating the A breakdown thing, we can make this more generic by refactoring these static methods into self
     # Coefficients of the linear combination A = c_0 A_0 + c_1 A_1 ...
     c = np.array([1.0, 0.2, 0.2])
@@ -15,12 +16,6 @@ class IndysProblem:
         for idx in range(n_qubits):
             qml.Hadamard(wires=idx)
 
-    # TODO: Given A written in linear combination form, form controlled versions of unitary components
-    # Refer to Ryan LaRose notebook, "IZX" notation, then convert to matrix version + controlled unitaries
-
-
-    # TODO: Can write a function that, given an A, find what are the required A_l components?
-    # This function gives the components of A
     @staticmethod
     def CA(idx):
         """Controlled versions of the unitary components A_l of the problem matrix A."""

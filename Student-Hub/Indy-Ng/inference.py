@@ -1,6 +1,4 @@
 import pennylane as qml
-# from circuits import variational_block
-from circuits import IndysProblem
 from pennylane import numpy as np
 from hyperparameters import *
 

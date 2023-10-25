@@ -7,6 +7,7 @@ import functools as ft
 import pennylane as qml
 from pennylane import numpy as np
 from pennylane import Identity, PauliX, PauliY, PauliZ
+from hyperparameters import *
 
 
 pauli_dict = {"I": Identity.compute_matrix(), "X": PauliX.compute_matrix(), "Y": PauliY.compute_matrix(), "Z": PauliZ.compute_matrix()}
@@ -71,13 +72,16 @@ def reshape_weights(n_qubits:int, n_parameters:int, layers:int, w):
 
     return init_weights, weights
 
+def b_to_num(problem):
+    dev = qml.device("default.qubit", wires=problem.get_n_qubits())
 
-dev = qml.device("default.qubit", wires=n_qubits)
+    def wrapper():
+        problem.U_b()
+        return qml.state()
+    
+    wrapper = qml.QNode(wrapper, dev)
 
-@qml.qnode(dev)
-def b_to_num():
-    U_b()
-    return qml.state()
+    return wrapper()
 
 
 # This function technically works BUT needs to be tested + optimized further
