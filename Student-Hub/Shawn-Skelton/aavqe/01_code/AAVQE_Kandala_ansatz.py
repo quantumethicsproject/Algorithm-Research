@@ -80,6 +80,8 @@ def U_ENT(wires):
     
     
 def kandala_circuit(param, wires, d):
+    ###simplified circuit from http://arxiv.org/abs/1704.05018
+
     ###indexing looks a bit fucked up bc its a 1d list (should be easier for pennylane basics)
     ###as a 3d array the indexing would be [d iteration, qubit number, R number]
     ###given $\theta_{j i}^q$ $j\in{1, 2, 3}$
