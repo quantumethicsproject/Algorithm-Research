@@ -72,13 +72,22 @@ sdef=1
 
 #####hardware efficient ansatz
 def U_ENT(wires):
+    """
+    we will follow the description in Larocca et al. extrapoloated from Fg. 4 and page 23. 
+    ZZ entangling gates are applied to neighbouring qubits, with a lattice rather than periodic set-up
+    FOR NOW, USE REGULAR CNOT INSTEAD OF exp(i\pi/2Z\otimesZ)
+    """
     sigmaX=np.array([[0,1],[1, 0]])
     sigmaZ=np.array([[1,0],[0, -1]])
-    U=np.array(sigmaX)
+    # U=np.array(sigmaX)
+    num_qubits=len(wires)
+    for j in range(0,num_qubits-1 ):
+        qml.CNOT([j, j+1])
+        # qml.ControlledQubitUnitary(U, 1)
     ###CNOTs to each, seems to work okay
-    qml.ControlledQubitUnitary(U, 1, 0)
-    qml.ControlledQubitUnitary(U, 0, 2)
-    qml.ControlledQubitUnitary(U, 1,3)
+    # qml.ControlledQubitUnitary(U, 1, 0)
+    # qml.ControlledQubitUnitary(U, 0, 2)
+    # qml.ControlledQubitUnitary(U, 1,3)
     
     
 def kandala_circuit(param, wires, d):
