@@ -13,14 +13,14 @@ import time
 import pickle
 import os.path
 
-import matplotlib.pyplot
+import matplotlib.pyplot as plt
 
 ####constants
-ifsave=True
+ifsave=False
 mol='H2'
 numpoints=1
 d=1
-ctol=1.6*10**(-3)
+ctol=1.6*10**(-6)
 mit=600
 ssteps=20
 
@@ -54,13 +54,15 @@ sdictvarg={}
 sarray=np.linspace(0, 1, ssteps) 
 
 available_data = qml.data.list_datasets()["qchem"][mol]["STO-3G"]
+
 bdl_array=available_data[1:2]
 print(bdl_array)
 
 def MOL_H_BUILD(mol, bdl):
     part = qml.data.load("qchem", molname=mol, basis="STO-3G", bondlength=bdl, attributes=["molecule", "hamiltonian", "fci_energy"])[0]
     H=part.hamiltonian
-    H0=qml.Hamiltonian(np.ones(qubits), [qml.PauliX(0), qml.PauliX(1), qml.PauliX(2), qml.PauliX(3)])
+    H0=qml.Hamiltonian(np.ones(qubits)/2, [qml.PauliX(0), qml.PauliX(1), qml.PauliX(2), qml.PauliX(3)])
+    #FCI:  Full configuration interaction (FCI) energy computed classically should be in Hatrees
     gsE=part.fci_energy
     return H, H0, gsE
 
@@ -152,6 +154,11 @@ def kandala_VQE(param0, d, Hvqe=Hdef, cost_fc=kandala_cost_fcn, systsz=qubits, m
     opt = qml.GradientDescentOptimizer(stepsize=0.4)
     
     energy=[]
+    mingrd=[]
+    avggrd=[]
+    probs=[]
+    nprobs=[]
+    var=[]
     thetas=param0
     t0r=time.perf_counter()
     bpsteps=False
@@ -160,9 +167,22 @@ def kandala_VQE(param0, d, Hvqe=Hdef, cost_fc=kandala_cost_fcn, systsz=qubits, m
         ##actually runs each optimization step and returns new parameters
         thetas, prev_energy, g= opt.step_and_cost(cost_fc, thetas, H=Hvqe)
         energy.append(cost_fc(thetas))
+        
+        mingrd.append(np.min(g))
+        avggrd.append(np.mean(g))
+        varg=np.var(g)
+
+        var.append(varg)
+
         if gradDetect==True:
-            varg, bpsteps=BP_DETECT(g, n, bpsteps)
-            kvarg.append(varg)
+            
+            tolv=10**(np.floor(np.log10(varg)))
+            if tolv<1/(9**(8)):
+                nprobs.append(n)
+                probs.append(varg)
+                print('warning, BP detected')
+                print('computed var', varg)
+                print('step', n)
 
         conv = np.abs(energy[-1] - prev_energy)
         if conv <= conv_tol:
@@ -170,7 +190,7 @@ def kandala_VQE(param0, d, Hvqe=Hdef, cost_fc=kandala_cost_fcn, systsz=qubits, m
         
     t1r=time.perf_counter()
 
-    return n, energy[-1], thetas, t1r-t0r
+    return n, energy[-1], thetas, t1r-t0r, mingrd,avggrd, probs, nprobs, var
 
 def AA_VQE(param0, d, Hvqe=Hdef, H0vqe=H0def, svqe=sdef, cost_fc=cost_fnAA, systsz=qubits, max_iterations=mit, conv_tol=ctol,gradDetect=False):
     
@@ -207,21 +227,32 @@ for b, bdl in enumerate(bdl_array):
     Hit,H0it, gsE=MOL_H_BUILD(mol, bdl)
     Hams.append(Hit)
     GS.append(gsE)
-    print('actual Ground state enegry', gsE)
-    kn, kE, thetas, kt=kandala_VQE(params0, d, Hvqe=Hit, gradDetect=True)
+
+    print('actual Ground state energy', gsE)
+    kn, kE, thetas, kt, kgrad, kavggrad, kprobs, knprobs, kvar=kandala_VQE(params0, d, Hvqe=Hit, gradDetect=True)
+    fig, (ax1, ax2) = plt.subplots(2)
+    
+    ax2.plot(knprobs, kprobs, 'b.', label='problem points')
+    ax1.plot(np.linspace(0, kn, kn+1) ,kavggrad,label='avg grad'  )
+    ax1.plot(np.linspace(0, kn, kn+1) ,kgrad, label='min grad' )
+    ax2.plot(np.linspace(0, kn, kn+1) ,kvar, label='var' )
+    
+    plt.legend()
+    plt.show()
     print('HEA solution', kn, kE, kt)
     kits.append(kn)
     kenergy.append(kE)
     ktimes.append(kt)
 
-    for sind, sit in enumerate(sarray):
-        n, E,thetas, ts, svarg=AA_VQE(params0, d, Hvqe=Hit, H0vqe=H0it, svqe=sit, gradDetect=True )
-        senergy.append(E)
-        sangle.append(thetas)
-        sn.append(n)
-        st.append(ts)
-        sdictvarg.update({"sit_is_"+str(sit): svarg}) 
-    print('AAVQE solution', senergy[-1])
+    # for sind, sit in enumerate(sarray):
+    #     n, E,thetas, ts, svarg=AA_VQE(params0, d, Hvqe=Hit, H0vqe=H0it, svqe=sit, gradDetect=True )
+    #     senergy.append(E)
+    #     sangle.append(thetas)
+    #     sn.append(n)
+    #     st.append(ts)
+    #     sdictvarg.update({"sit_is_"+str(sit): svarg}) 
+    #     print("it solution", n)
+    # print('AAVQE solution', senergy[-1])
     
 
 ###save stuff
