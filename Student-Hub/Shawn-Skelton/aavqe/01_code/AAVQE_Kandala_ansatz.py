@@ -70,6 +70,25 @@ def MOL_H_BUILD(mol, bdl):
 Hdef,H0def, gsEdef=MOL_H_BUILD(mol, bdl_array[0])
 sdef=1
 
+def ISING_HAM(sites, J, h):
+    """
+    Builds a 1D nonperiodic Ising hamiltonian and computes the ground state energy using exact diagonalization
+    we assume all J, h>0 and $h_i=h_j=h, J_i=J_j=J$ for simplicity. 
+    In math, the $n$ site(qubit) Ising hamiltonian is $H=-J\sum_{i=0}^{n-1} Z_iZ_{i+1}-h\sum_{i=0}^nX_i$
+    H_0 is the simple hamiltonian we need for the AAVQE step
+    """
+    Gset1q=[qml.PauliX(i) for i in range(0, sites)]
+    Gset2q=[qml.PauliZ(i) @ qml.PauliZ(i+1) for i in range(0, sites-1)]
+    coeffs=np.append(-h*np.ones(sites),-J*np.ones(sites-1))
+    
+    H0=qml.Hamiltonian(np.ones(sites)/(sites), Gset1q)
+    H=qml.Hamiltonian(coeffs, Gset1q+Gset2q)
+    
+    eigs=np.linalg.eigvals(qml.matrix(H))
+    gse=min(np.real(eigs))
+    return H, H0, gse
+
+
 #####hardware efficient ansatz
 def U_ENT(wires):
     """
@@ -82,7 +101,8 @@ def U_ENT(wires):
     # U=np.array(sigmaX)
     num_qubits=len(wires)
     for j in range(0,num_qubits-1 ):
-        qml.CNOT([j, j+1])
+        #qml.CNOT([j, j+1])
+        qml.IsingZZ(np.pi, [j, j+1])
         # qml.ControlledQubitUnitary(U, 1)
     ###CNOTs to each, seems to work okay
     # qml.ControlledQubitUnitary(U, 1, 0)
