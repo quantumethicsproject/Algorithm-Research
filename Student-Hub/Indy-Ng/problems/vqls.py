@@ -131,3 +131,32 @@ def A_Ising_num (n: int, zeta: float, eta: float, J: float):
 
     return Acoeffs, Aterms
       
+def generate_H_Ising(n: int, J: float, cond_num: int):
+    Acoeffs = []
+    Aterms = []
+    
+    Acoeffs += [1] * n
+    xbase = "X" + "I" * (n - 1)
+    for ii in range(n, 0, -1):
+        Aterms.append(xbase[ii:] + xbase[:ii])
+
+    Acoeffs += [J] * (n - 1)
+    zzbase = "ZZ" + "I" * (n - 2)
+    for ii in range(n, 1, -1):
+        Aterms.append(zzbase[ii:] + zzbase[:ii])
+
+    H_ising = A_to_num(n, Acoeffs, Aterms)
+
+    e_vals = np.linalg.eig(H_ising)[0]
+    e_max, e_min = max(e_vals), min(e_vals)
+    
+    zeta = (e_max - e_min) / (1 - (1/cond_num))
+    eta = zeta - e_max
+
+    Acoeffs += [eta]
+    Aterms += ["I" * n]
+
+    Acoeffs /= zeta
+
+    return Acoeffs, Aterms, zeta, eta # could remove zeta, eta after debugging
+    

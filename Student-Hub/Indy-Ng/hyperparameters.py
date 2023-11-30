@@ -4,11 +4,11 @@ from pennylane import numpy as np
 n_shots = 10**6
 
 # Number of optimization steps
-steps = 1
+steps = 30
 
 # Learning rate of optimization algorithm
 # TODO: hyperparameter tuning for eta (think coarse to fine)
-eta = 0.8
+eta = 4
 
 # Initial spread of random quantum weights
 q_delta = 0.001

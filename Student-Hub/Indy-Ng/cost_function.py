@@ -66,29 +66,32 @@ def cost_loc(problem, weights, device):
 
         for l in range(0, len(c)):
             for lp in range(0, len(c)):
-                start = time.time()
+                # start = time.time()
                 norm = norm + c[l] * np.conj(c[lp]) * mu(weights, l, lp, -1)
-                print(f"norm accum ({l*len(c) + lp}): {time.time() - start:.3f}")
+                # print(f"norm accum ({l*len(c) + lp}): {time.time() - start:.3f}")
 
         return abs(norm)
     
     
     
-    start = time.time()
+    # start = time.time()
     mu_sum = 0.0
 
     for l in range(0, len(c)):
         for lp in range(0, len(c)):
             for j in range(0, n_qubits):
-                start2 = time.time()
+                # start2 = time.time()
                 mu_sum = mu_sum + c[l] * np.conj(c[lp]) * mu(weights, l, lp, j)
-                print(f"mu sum accum ({l*len(c)*len(c) + lp*len(c) + j}): {time.time() - start2:.3f}")
+                # print(f"mu sum accum ({l*len(c)*len(c) + lp*len(c) + j}): {time.time() - start2:.3f}")
 
     mu_sum = abs(mu_sum)
-    print(f"mu sum: \t{time.time() - start:.2f}s")
+    # print(f"mu sum: \t{time.time() - start:.2f}s")
 
     # Cost function C_L
-    start = time.time()
+    # start = time.time()
     res = 0.5 - 0.5 * mu_sum / (n_qubits * psi_norm(weights))
-    print(f"normalize:\t{time.time() - start:.2f}")
+    # print(f"normalize:\t{time.time() - start:.2f}")
     return res
+
+def calc_err(n_qubits: int, cost: float, cond_number: float) -> float:
+    return np.sqrt(n_qubits * cost * (cond_number ** 2))
