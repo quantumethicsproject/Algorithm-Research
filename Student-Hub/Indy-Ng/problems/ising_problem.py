@@ -2,23 +2,31 @@ import pennylane as qml
 from pennylane import numpy as np
 
 from .problem_base import Problem
-from .vqls import A_Ising_num, A_to_num, A_to_code, b_to_num, reshape_weights
+from .vqls import generate_H_Ising, A_to_code, b_to_num, reshape_weights
 
 class IsingProblem(Problem):
-    def __init__(self, n_qubits, J, zeta, eta_ising):
-        c, A_terms = A_Ising_num(n_qubits, zeta, eta_ising, J)
+    def __init__(self, n_qubits, J, cond_num):
+        c, A_terms, self.zeta, self.eta = generate_H_Ising(n_qubits, J, cond_num)
+        print(A_terms)
+        self.n_layers = 4
+        self._param_shape = 5 * self.n_layers * n_qubits
         super().__init__(n_qubits, c, A_terms)
+
 
     # getters
     # TEMP
-    def get_condition_number(self):
-        return np.linalg.norm(self.A_num) * np.linalg.norm(np.linalg.inv(self.A_num))
+    def get_eta_zeta(self):
+        return self.zeta, self.eta
     
     def get_coeffs(self):
         return self.c, self.A_terms
     
     def get_n_qubits(self):
         return self.n_qubits
+    
+    @property
+    def param_shape(self):
+        return self._param_shape
 
     # circuit components
     def U_b(self):

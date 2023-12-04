@@ -8,7 +8,7 @@ steps = 30
 
 # Learning rate of optimization algorithm
 # TODO: hyperparameter tuning for eta (think coarse to fine)
-eta = 4
+eta = 3.5
 
 # Initial spread of random quantum weights
 q_delta = 0.001

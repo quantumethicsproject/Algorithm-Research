@@ -35,6 +35,6 @@ def get_qprobs(problem, w, device):
     for sam in raw_samples:
         samples.append(int("".join(str(bs) for bs in sam), base=2))
 
-    q_probs = np.bincount(samples) / n_shots
+    q_probs = np.bincount(samples, minlength=2**problem.n_qubits) / n_shots
 
     return q_probs
