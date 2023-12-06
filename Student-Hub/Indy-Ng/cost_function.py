@@ -68,7 +68,7 @@ def cost_loc(problem, weights, device):
             for lp in range(0, len(c)):
                 # start = time.time()
                 norm = norm + c[l] * np.conj(c[lp]) * mu(weights, l, lp, -1)
-                # print(f"norm accum ({l*len(c) + lp}): {time.time() - start:.3f}")
+                # print(f"norm accum ({l*len(c) + lp})")
 
         return abs(norm)
     
@@ -82,7 +82,7 @@ def cost_loc(problem, weights, device):
             for j in range(0, n_qubits):
                 # start2 = time.time()
                 mu_sum = mu_sum + c[l] * np.conj(c[lp]) * mu(weights, l, lp, j)
-                # print(f"mu sum accum ({l*len(c)*len(c) + lp*len(c) + j}): {time.time() - start2:.3f}")
+                # print(f"mu sum accum ({l*len(c)*len(c) + lp*len(c) + j})")
 
     mu_sum = abs(mu_sum)
     # print(f"mu sum: \t{time.time() - start:.2f}s")

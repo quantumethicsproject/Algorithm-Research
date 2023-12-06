@@ -8,10 +8,13 @@ steps = 30
 
 # Learning rate of optimization algorithm
 # TODO: hyperparameter tuning for eta (think coarse to fine)
-eta = 3.5
+eta = 3
 
 # Initial spread of random quantum weights
 q_delta = 0.001
 
 # Seed for RNG
 rng_seed = 0
+
+# exploit param broadcasting
+batch_size = 4
