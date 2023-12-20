@@ -35,7 +35,7 @@ class IsingProblem(Problem):
     def CA(self, idx):
         A_to_code(idx, ancilla_idx=self.ancilla_idx, terms=self.A_terms)
 
-    def variational_block(self, weights):
+    def variational_block(self, weights, offset=0):
         # could be put in the state but idk
         layers = 2
         n_parameters = self.n_qubits + layers*(2*self.n_qubits - 2)
@@ -45,7 +45,7 @@ class IsingProblem(Problem):
         qml.templates.SimplifiedTwoDesign(
             initial_layer_weights=init_weights,
             weights=weights,
-            wires=range(self.n_qubits),
+            wires=range(offset, self.n_qubits + offset),
         )
 
     # what do I actually want to achieve with this func

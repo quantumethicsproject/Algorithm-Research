@@ -61,11 +61,11 @@ class ToyProblem(Problem):
         if self.n_qubits == 5:
             [qml.Hadamard(wires=i) for i in [0,2,3,4]]
         
-    def CA(self, idx):
-        A_to_code(idx, ancilla_idx=self.ancilla_idx, terms=self.A_terms)
+    def CA(self, idx, offset=0):
+        A_to_code(idx, ancilla_idx=self.ancilla_idx + offset, terms=self.A_terms, offset=offset)
 
-    def variational_block(self, weights):
-        [qml.RY(phi=weights[i], wires=i) for i in range(self.n_qubits)]
+    def variational_block(self, weights, offset=0):
+        [qml.RY(phi=weights[i], wires=i) for i in range(offset, self.n_qubits + offset)]
 
     # what do I actually want to achieve with this func
     def get_A_and_b(self):

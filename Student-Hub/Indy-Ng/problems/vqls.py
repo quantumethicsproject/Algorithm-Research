@@ -86,14 +86,14 @@ def b_to_num(problem):
 
 # This function technically works BUT needs to be tested + optimized further
 
-def A_to_code (idx, ancilla_idx, terms: List[str]):
+def A_to_code (idx, ancilla_idx, terms: List[str], offset=0):
 
     if idx < 0:
         raise ValueError("Index of linear combination must be >= 0.")
     
     target_pauli = list(terms[idx])
     
-    order_idx = 0
+    order_idx = offset
 
     for i in range(len(target_pauli)):
         if target_pauli[i] == 'I':
