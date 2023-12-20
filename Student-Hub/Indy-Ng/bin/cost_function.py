@@ -1,5 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as np
+from bin.error_mitigation import mitigate_node
 
 import time
 
@@ -48,6 +49,8 @@ def cost_loc(problem, weights, device):
         return qml.expval(qml.PauliZ(wires=ancilla_idx))
     
     local_hadamard_test = qml.QNode(local_hadamard_test, device, interface="autograd")
+
+    local_hadamard_test = mitigate_node(local_hadamard_test)
     
     # Computes the mu coefficients
     def mu(weights, l=None, lp=None, j=None):
@@ -139,6 +142,8 @@ def cost_global(problem, weights, device, device2):
     
     local_hadamard_test = qml.QNode(local_hadamard_test, device, interface="autograd")
 
+    local_hadamard_test = mitigate_node(local_hadamard_test)
+
     # Computes the mu coefficients
     def mu(weights, l=None, lp=None, j=None):
         """Generates the coefficients to compute the "local" cost function C_L."""
@@ -175,13 +180,17 @@ def cost_global(problem, weights, device, device2):
         qml.CNOT(wires=(n_qubits*2 - 1, n_qubits-1))
         qml.CNOT(wires=(n_qubits, 0))
 
-        # 2 more hadamards
-        qml.Hadamard(wires=[n_qubits*2, n_qubits*2 - 1, n_qubits])
+        # 3 more hadamards
+        qml.Hadamard(wires=n_qubits*2)
+        qml.Hadamard(wires=n_qubits*2 - 1)
+        qml.Hadamard(wires=n_qubits)
 
         # we need to measure all the qubits I think? TODO confirm this fact
-        return qml.expval(qml.PauliZ(wires=list(range(ancilla_idx*2))))
+        return [qml.expval(qml.PauliZ(wires=i)) for i in range(ancilla_idx*2)]
 
     hadamard_overlap_test = qml.QNode(hadamard_overlap_test, device2, interface="autograd")
+
+    hadamard_overlap_test = mitigate_node(hadamard_overlap_test)
 
     def gamma(weights, l=None, lp=None):
         gamma_real = hadamard_overlap_test(weights, l=l, lp=lp, part="Re")

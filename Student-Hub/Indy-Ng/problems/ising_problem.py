@@ -1,6 +1,5 @@
 import pennylane as qml
 from pennylane import numpy as np
-
 from .problem_base import Problem
 from .vqls import generate_H_Ising, A_to_code, b_to_num, reshape_weights
 

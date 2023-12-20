@@ -17,3 +17,5 @@ rng_seed = 0
 
 # exploit param broadcasting
 batch_size = 1
+
+NOISY = True

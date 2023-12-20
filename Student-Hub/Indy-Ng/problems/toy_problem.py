@@ -1,5 +1,4 @@
 import pennylane as qml
-from hyperparameters import *
 from pennylane import numpy as np
 from .problem_base import Problem
 from .vqls import A_to_num, A_to_code, b_to_num
@@ -65,7 +64,7 @@ class ToyProblem(Problem):
         A_to_code(idx, ancilla_idx=self.ancilla_idx + offset, terms=self.A_terms, offset=offset)
 
     def variational_block(self, weights, offset=0):
-        [qml.RY(phi=weights[i], wires=i) for i in range(offset, self.n_qubits + offset)]
+        [qml.RY(phi=weights[i], wires=i+offset) for i in range(self.n_qubits)]
 
     # what do I actually want to achieve with this func
     def get_A_and_b(self):

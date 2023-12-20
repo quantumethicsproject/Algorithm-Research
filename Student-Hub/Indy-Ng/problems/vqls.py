@@ -7,7 +7,6 @@ import functools as ft
 import pennylane as qml
 from pennylane import numpy as np
 from pennylane import Identity, PauliX, PauliY, PauliZ
-from hyperparameters import *
 
 
 pauli_dict = {"I": Identity.compute_matrix(), "X": PauliX.compute_matrix(), "Y": PauliY.compute_matrix(), "Z": PauliZ.compute_matrix()}
