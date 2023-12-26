@@ -25,7 +25,7 @@ def cost_loc(problem, weights, device):
         problem.variational_block(weights)
 
         # Controlled application of the unitary component A_l of the problem matrix A.
-        problem.CA(l)
+        problem.CA(ancilla_idx, l)
 
         # Adjoint of the unitary U_b associated to the problem vector |b>.
         # In this specific example Adjoint(U_b) = U_b.
@@ -40,7 +40,7 @@ def cost_loc(problem, weights, device):
 
         # Controlled application of Adjoint(A_lp).
         # In this specific example Adjoint(A_lp) = A_lp.
-        problem.CA(lp)
+        problem.CA(ancilla_idx, lp)
 
         # Second Hadamard gate applied to the ancillary qubit.
         qml.Hadamard(wires=ancilla_idx)
@@ -50,7 +50,7 @@ def cost_loc(problem, weights, device):
     
     local_hadamard_test = qml.QNode(local_hadamard_test, device, interface="autograd")
 
-    local_hadamard_test = mitigate_node(local_hadamard_test)
+    # local_hadamard_test = mitigate_node(local_hadamard_test)
     
     # Computes the mu coefficients
     def mu(weights, l=None, lp=None, j=None):
@@ -117,7 +117,7 @@ def cost_global(problem, weights, device, device2):
         problem.variational_block(weights)
 
         # Controlled application of the unitary component A_l of the problem matrix A.
-        problem.CA(l)
+        problem.CA(ancilla_idx, l)
 
         # Adjoint of the unitary U_b associated to the problem vector |b>.
         # In this specific example Adjoint(U_b) = U_b.
@@ -132,7 +132,7 @@ def cost_global(problem, weights, device, device2):
 
         # Controlled application of Adjoint(A_lp).
         # In this specific example Adjoint(A_lp) = A_lp.
-        problem.CA(lp)
+        problem.CA(ancilla_idx, lp)
 
         # Second Hadamard gate applied to the ancillary qubit.
         qml.Hadamard(wires=ancilla_idx)
@@ -142,7 +142,7 @@ def cost_global(problem, weights, device, device2):
     
     local_hadamard_test = qml.QNode(local_hadamard_test, device, interface="autograd")
 
-    local_hadamard_test = mitigate_node(local_hadamard_test)
+    # local_hadamard_test = mitigate_node(local_hadamard_test)
 
     # Computes the mu coefficients
     def mu(weights, l=None, lp=None, j=None):
@@ -167,11 +167,11 @@ def cost_global(problem, weights, device, device2):
         problem.U_b()
 
         # Controlled application of the unitary component A_l of the problem matrix A on the top half.
-        problem.CA(l, offset=n_qubits)
+        problem.CA(ancilla_idx*2, l, offset=n_qubits)
 
         # Controlled application of Adjoint(A_lp) applied to the bottom half
         # In this specific example Adjoint(A_lp) = A_lp. #TODO: is it really?
-        problem.CA(lp)
+        problem.CA(ancilla_idx*2, lp)
 
         if part == "Im":
             qml.RZ(phi=-np.pi/2, wires=ancilla_idx*2)
@@ -185,12 +185,12 @@ def cost_global(problem, weights, device, device2):
         qml.Hadamard(wires=n_qubits*2 - 1)
         qml.Hadamard(wires=n_qubits)
 
-        # we need to measure all the qubits I think? TODO confirm this fact
-        return [qml.expval(qml.PauliZ(wires=i)) for i in range(ancilla_idx*2)]
+        # to get P(0) - P(1), we only need to measure the expval of the helper qubit
+        return qml.expval(qml.PauliZ(wires=ancilla_idx*2))
 
     hadamard_overlap_test = qml.QNode(hadamard_overlap_test, device2, interface="autograd")
 
-    hadamard_overlap_test = mitigate_node(hadamard_overlap_test)
+    # hadamard_overlap_test = mitigate_node(hadamard_overlap_test)
 
     def gamma(weights, l=None, lp=None):
         gamma_real = hadamard_overlap_test(weights, l=l, lp=lp, part="Re")
@@ -211,6 +211,10 @@ def cost_global(problem, weights, device, device2):
             overlap = overlap + c[l] * np.conj(c[lp]) * gamma(weights, l, lp)
 
     norm = abs(norm)
+
+    print(norm, overlap)
+
+    return 1 - overlap / norm # TODO: double check this expression
 
 
         

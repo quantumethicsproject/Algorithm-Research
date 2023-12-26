@@ -1,6 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as np
-from hyperparameters import *
+from bin.hyperparameters import *
 from bin.error_mitigation import mitigate_node
 
 def prepare_and_sample(problem, weights):

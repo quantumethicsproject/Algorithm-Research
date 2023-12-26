@@ -60,8 +60,8 @@ class ToyProblem(Problem):
         if self.n_qubits == 5:
             [qml.Hadamard(wires=i) for i in [0,2,3,4]]
         
-    def CA(self, idx, offset=0):
-        A_to_code(idx, ancilla_idx=self.ancilla_idx + offset, terms=self.A_terms, offset=offset)
+    def CA(self, ancilla_idx, idx, offset=0):
+        A_to_code(idx, ancilla_idx=ancilla_idx, terms=self.A_terms, offset=offset)
 
     def variational_block(self, weights, offset=0):
         [qml.RY(phi=weights[i], wires=i+offset) for i in range(self.n_qubits)]
