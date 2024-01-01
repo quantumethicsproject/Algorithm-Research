@@ -1,6 +1,5 @@
 import pennylane as qml
 from pennylane import numpy as np
-from bin.error_mitigation import mitigate_node
 
 import time
 
