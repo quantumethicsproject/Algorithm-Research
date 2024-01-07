@@ -29,10 +29,10 @@ def get_cprobs(problem):
 def get_qprobs(problem, w, device):
     sampler = qml.QNode(prepare_and_sample, device)
 
-    sampler = mitigate_node(sampler)
+    # sampler = mitigate_node(sampler)
 
     raw_samples = sampler(problem, w)
-    raw_samples = np.concatenate(raw_samples, axis=0)# FOR BATCHING
+    # raw_samples = np.concatenate(raw_samples, axis=0)# FOR BATCHING
 
     # convert the raw samples (bit strings) into integers and count them
     samples = []
