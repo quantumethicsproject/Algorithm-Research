@@ -4,6 +4,7 @@ from pennylane import numpy as np
 import time
 
 def local_hadamard_test(weights, problem, l=None, lp=None, j=None, part=None):
+    """this function implements the local hadamard test for calculating mu and the norm"""
 
     ancilla_idx = problem.get_n_qubits()
 
@@ -55,6 +56,8 @@ def mu(weights, local_hadamard_test, problem, l=None, lp=None, j=None):
 
 def get_bin(state: int, n_qubits):
     """
+    Helper function that identifies the correct bin for the overlap test. Details can be found in Cincio et. al
+
     @param
     state: a measurement outcome as an int 
     return: (-1 or 1, corresponding to whether the prob on the bitstring should be added or subtracted)
@@ -72,6 +75,7 @@ def get_bin(state: int, n_qubits):
     return acc
 
 def gamma(weights, hadamard_overlap_test, problem, l=None, lp=None):
+    """calculates the gamma coefficients for C_G"""
     n_qubits = problem.get_n_qubits()
 
     probs_real = hadamard_overlap_test(weights, problem, l=l, lp=lp, part="Re")
@@ -80,6 +84,7 @@ def gamma(weights, hadamard_overlap_test, problem, l=None, lp=None):
     gamma_real = 0
     gamma_imag = 0
 
+    # I have a feeling a lot of these are cancelling each other out resulting in a very low output value
     for state, prob in enumerate(probs_real):
         gamma_real += get_bin(state, n_qubits) * prob
     
@@ -103,6 +108,8 @@ def psi_norm(weights, c, local_hadamard_test, problem):
     return abs(norm)
 
 def hadamard_overlap_test(weights, problem, l=None, lp=None, part=None):
+    """implements the overlap test for C_G"""
+
     n_qubits = problem.get_n_qubits()
     ancilla_idx = n_qubits * 2
 
@@ -160,6 +167,7 @@ def cost_loc(problem, weights, local_hadamard_test):
 
 def cost_global(problem, weights, local_hadamard_test, hadamard_overlap_test):
     """Global version of the cost function. Tends to zero when A|x> is proportional to |b>."""
+
     c, _ = problem.get_coeffs()
 
     norm = 0.0
@@ -174,15 +182,11 @@ def cost_global(problem, weights, local_hadamard_test, hadamard_overlap_test):
             overlap = overlap + c[l] * np.conj(c[lp]) * gamma(weights, hadamard_overlap_test, problem, l, lp)
 
     norm = abs(norm)
-
-    print(norm, overlap)
+    overlap = abs(overlap)
 
     return 1 - overlap / norm # TODO: double check this expression
 
 
-        
-
-
-
 def calc_err(n_qubits: int, cost: float, cond_number: float) -> float:
+    """helper function that turns a cost value into an error bound"""
     return np.sqrt(abs(n_qubits * cost * (cond_number ** 2)))

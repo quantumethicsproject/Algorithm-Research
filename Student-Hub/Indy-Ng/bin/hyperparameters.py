@@ -4,7 +4,7 @@ from pennylane import numpy as np
 n_shots = 10**6
 
 # Number of optimization steps
-steps = 1
+steps = 30
 
 # Learning rate of optimization algorithm
 eta = 3

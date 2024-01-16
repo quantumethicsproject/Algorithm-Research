@@ -5,6 +5,7 @@ from .vqls import A_to_num, A_to_code, b_to_num
 
 class ToyProblem(Problem):
     def __init__(self, n_qubits):
+        # TODO: make the A_to_code function work with H
         if n_qubits == 1:
             # c = [1]
             # A_terms = ["H"]

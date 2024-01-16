@@ -34,10 +34,12 @@ class Problem(ABC):
 
     @abstractmethod
     def CA(idx):
+        """controlled application of A_l"""
         pass
 
     @abstractmethod
     def variational_block(weights):
+        """function that defines the ansatz"""
         pass
 
     @abstractmethod
