@@ -11,18 +11,24 @@ class ToyProblem(Problem):
             # A_terms = ["H"]
             # B_terms = ["X"]
             
-            c = [1, 0.25]
-            A_terms = ["I", "Z"]
-            B_terms = ["X"]
+            # c = [1, 0.25]
+            # A_terms = ["I", "Z"]
+            # B_terms = ["X"]
+            pass
 
         if n_qubits == 2:
             # c = [1]
             # A_terms = ["XH"]
             # B_terms = ["HH"]
 
-            c = [1, 0.25]
-            A_terms = ["II", "IZ"]
-            B_terms = ["HI"]
+            # c = [1, 0.25]
+            # A_terms = ["II", "IZ"]
+            # B_terms = ["HI"]
+
+            # actually stupid problem
+            c = [1]
+            A_terms = ["IZ"]
+            B_terms = ["IH"]
 
         if n_qubits == 3:
             c = [1, 0.25]
@@ -54,8 +60,10 @@ class ToyProblem(Problem):
         if self.n_qubits == 1:
             qml.PauliX(0)
         if self.n_qubits == 2:
+            pass
+            qml.PauliX(0)
             # qml.Hadamard(0)
-            [qml.Hadamard(wires=i) for i in [0,1]]
+            # [qml.Hadamard(wires=i) for i in [0,1]]
         if self.n_qubits == 3:
             [qml.Hadamard(wires=i) for i in [0,1]]
         if self.n_qubits == 5:
