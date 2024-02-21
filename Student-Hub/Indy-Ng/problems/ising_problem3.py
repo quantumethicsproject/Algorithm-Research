@@ -3,11 +3,11 @@ from pennylane import numpy as np
 from .problem_base import Problem
 from .vqls import generate_H_Ising, A_to_code, b_to_num, reshape_weights
 
-class IsingProblem(Problem):
+class IsingProblem3(Problem):
     def __init__(self, n_qubits, J, cond_num):
         c, A_terms, self.zeta, self.eta = generate_H_Ising(n_qubits, J, cond_num)
         print(A_terms)
-        self.n_layers = 2
+        self.n_layers = 1
         self._param_shape = 5 * self.n_layers * n_qubits
         super().__init__(n_qubits, c, A_terms)
 
@@ -35,17 +35,18 @@ class IsingProblem(Problem):
         A_to_code(idx, ancilla_idx=self.ancilla_idx, terms=self.A_terms)
 
     def variational_block(self, weights, offset=0):
-        # could be put in the state but idk
-        layers = 2
-        n_parameters = self.n_qubits + layers*(2*self.n_qubits - 2)
+        weights_used = 0
+        [qml.RY(phi=weights[i + weights_used], wires=i+offset) for i in range(self.n_qubits)]
+        weights_used += self.n_qubits
 
-        init_weights, weights = reshape_weights(self.n_qubits, n_parameters, layers, weights)
-
-        qml.templates.SimplifiedTwoDesign(
-            initial_layer_weights=init_weights,
-            weights=weights,
-            wires=range(offset, self.n_qubits + offset),
-        )
+        for _ in range(self.n_layers):
+            # # 1 layer
+            [qml.CZ(wires=(j, j+1)) for j in range(0, self.n_qubits-1, 2)]
+            [qml.RY(phi=weights[i + weights_used], wires=i+offset) for i in range(self.n_qubits//2 * 2)]
+            weights_used += self.n_qubits // 2 * 2 - 1
+            [qml.CZ(wires=(j, j+1)) for j in range(1, self.n_qubits-1, 2)]
+            [qml.RY(phi=weights[i + weights_used], wires=i+offset) for i in range(1,(self.n_qubits + 1) // 2 * 2 -1)]
+            weights_used += (self.n_qubits + 1) // 2 * 2 -1
 
     # what do I actually want to achieve with this func
     def get_A_and_b(self):
