@@ -31,7 +31,7 @@ class IsingProblem(Problem):
     def U_b(self):
         [qml.Hadamard(wires=i) for i in range(self.n_qubits)]
 
-    def CA(self, idx):
+    def CA(self, ancilla_idx, idx):
         A_to_code(idx, ancilla_idx=self.ancilla_idx, terms=self.A_terms)
 
     def variational_block(self, weights, offset=0):
