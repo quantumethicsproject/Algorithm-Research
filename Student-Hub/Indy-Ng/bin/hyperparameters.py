@@ -7,7 +7,7 @@ n_shots = 10**6
 steps = 30
 
 # Learning rate of optimization algorithm
-eta = 3
+eta = 5
 
 # Initial spread of random quantum weights
 q_delta = 0.001
@@ -19,4 +19,4 @@ rng_seed = 0
 batch_size = 1
 
 NOISE_MODEL = None
-OPTIMIZER = "COBYLA"
+OPTIMIZER = f"SGD_lr={eta}"

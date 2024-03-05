@@ -5,7 +5,7 @@ from pennylane import numpy as np
 import matplotlib.pyplot as plt
 # from problems.ising_problem2 import IsingProblem2
 from problems.ising_problem import IsingProblem
-from problems.toy_problem import ToyProblem
+from problems.toy_benchmark_problem import ToyProblem
 from qiskit.providers.fake_provider import *
 from bin.cost_function import cost_loc, calc_err, cost_global, local_hadamard_test, hadamard_overlap_test
 from bin.hyperparameters import *
@@ -36,15 +36,16 @@ def configured_backend():
     # backend.options.update_options(...)
     return backend
 
-for i in range(3):
+for i in range(10):
     print(f"running trial {i}...")
     # %%
     # define the problem we want to perform our experiment on
-    n_qubits = 3
+    n_qubits = 7
     error = 1.6 * 10**-3
     cond_num = 2
 
-    problem = IsingProblem(n_qubits=n_qubits, J=0.1, cond_num=cond_num)
+    problem = ToyProblem(n_qubits=n_qubits)
+    # problem = IsingProblem(n_qubits=n_qubits, J=0.1, cond_num=cond_num)
 
     # %%
     # initialize weights
@@ -249,7 +250,7 @@ for i in range(3):
     # %%
     # # serialize to JSON
 
-    with open('data/Ising_COBYLA_noiseless.json', 'a') as fp:
+    with open('data/Toy_COBYLA_noiseless.json', 'a') as fp:
         fp.write(",")
         json.dump(result, fp)
 

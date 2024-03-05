@@ -1,11 +1,12 @@
 import pennylane as qml
 from pennylane import numpy as np
 from .problem_base import Problem
-from .vqls import generate_H_Ising, A_to_code, b_to_num, reshape_weights
+from .vqls import A_to_code, b_to_num, reshape_weights
 
-class IsingProblem(Problem):
-    def __init__(self, n_qubits, J, cond_num):
-        c, A_terms, self.zeta, self.eta = generate_H_Ising(n_qubits, J, cond_num)
+class ToyProblem(Problem):
+    def __init__(self, n_qubits):
+        c = [1, 0.25]
+        A_terms = ["I"*n_qubits, "X"*n_qubits]
         print(A_terms)
         self.n_layers = 2
         self._param_shape = 5 * self.n_layers * n_qubits
@@ -13,9 +14,6 @@ class IsingProblem(Problem):
 
 
     # getters
-    # TEMP
-    def get_eta_zeta(self):
-        return self.zeta, self.eta
     
     def get_coeffs(self):
         return self.c, self.A_terms
