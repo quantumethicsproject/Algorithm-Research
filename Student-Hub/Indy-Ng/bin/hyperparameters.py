@@ -7,7 +7,7 @@ n_shots = 10**6
 steps = 30
 
 # Learning rate of optimization algorithm
-eta = 5
+eta = 0.1
 
 # Initial spread of random quantum weights
 q_delta = 0.001
@@ -18,5 +18,6 @@ rng_seed = 0
 # exploit param broadcasting
 batch_size = 1
 
-NOISE_MODEL = None
-OPTIMIZER = f"SGD_lr={eta}"
+NOISE_MODEL = "FakeManila"
+OPTIMIZER = f"COBYLA"
+# OPTIMIZER = f"SGD_lr={eta}"

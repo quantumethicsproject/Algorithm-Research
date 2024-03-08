@@ -36,11 +36,11 @@ def configured_backend():
     # backend.options.update_options(...)
     return backend
 
-for i in range(10):
+for i in range(1):
     print(f"running trial {i}...")
     # %%
     # define the problem we want to perform our experiment on
-    n_qubits = 7
+    n_qubits = 4
     error = 1.6 * 10**-3
     cond_num = 2
 
@@ -56,9 +56,9 @@ for i in range(10):
 
     # %%
     # create our devices to run our circuits on
-    dev_mu = qml.device("default.qubit", wires=n_qubits+1)
+    # dev_mu = qml.device("default.qubit", wires=n_qubits+1)
     dev_gamma = qml.device("default.qubit", wires=n_qubits*2 + 1)
-    # dev_mu = qml.device("qiskit.remote", wires=n_qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
+    dev_mu = qml.device("qiskit.remote", wires=n_qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
 
     # %%
     # in order to make the error mitigation work, we have to pull out the QNode definition outside of the cost function so I'm doing it here
@@ -250,7 +250,7 @@ for i in range(10):
     # %%
     # # serialize to JSON
 
-    with open('data/Toy_COBYLA_noiseless.json', 'a') as fp:
+    with open(f'data/Toy_COBYLA_{NOISE_MODEL}.json', 'a') as fp:
         fp.write(",")
         json.dump(result, fp)
 

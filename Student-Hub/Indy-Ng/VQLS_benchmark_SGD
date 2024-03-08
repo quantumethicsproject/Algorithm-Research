@@ -37,7 +37,7 @@ def configured_backend():
 
 # %%
 # define the problem we want to perform our experiment on
-n_qubits = 8
+n_qubits = 2
 error = 1.6 * 10**-3
 cond_num = 2
 
@@ -53,11 +53,18 @@ init_weights = list(w.copy().numpy())
 
 # %%
 # create our devices to run our circuits on
+noise_strength = 0.01
 dev_mu = qml.device("default.mixed", wires=n_qubits+1)
-
+if NOISE_MODEL == "Bitflip=0.01":
+    dev_mu = qml.transforms.insert(
+        dev_mu,
+        qml.BitFlip,
+        noise_strength
+    )
 # dev_mu = qml.device("default.qubit", wires=n_qubits+1)
 dev_gamma = qml.device("default.qubit", wires=n_qubits*2 + 1)
-# dev_mu = qml.device("qiskit.remote", wires=n_qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
+if NOISE_MODEL == "FakeManila":
+    dev_mu = qml.device("qiskit.remote", wires=n_qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
 
 # %%
 # in order to make the error mitigation work, we have to pull out the QNode definition outside of the cost function so I'm doing it here
@@ -107,7 +114,7 @@ it = 1
 
 best_err = 1000
 best_w = w
-# prev_w = w
+prev_err = 0
 
 ERR_1000 = None
 TTS_1000 = None
@@ -131,7 +138,10 @@ while err > error:
     print("Step {:3d}       Cost_L = {:9.7f} \t error = {:9.7f}".format(it, cost, err), flush=True)
     cost_history.append(cost)
 
-    prev_w = w
+    if  abs(prev_err - err) < 10**-9:
+        break
+
+    prev_err = err
 
     if it == 1000:
         ERR_1000 = err
@@ -257,7 +267,7 @@ result = {
 # # serialize to JSON?
 import json
 
-with open('data/Toy_SGD_noiseless.json', 'a') as fp:
+with open('data/Toy_SGD_FakeManila.json', 'a') as fp:
     fp.write(",")
     json.dump(result, fp)
 
