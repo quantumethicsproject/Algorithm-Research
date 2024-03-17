@@ -22,23 +22,39 @@ numpoints=1
 d=1
 ctol=1.6*10**(-3)
 mit=200
-ssteps=4
+ssteps=20
 
 
 
 ###want to automate eventually:
 qubits=4
+HNAME='XX4'
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
 
 #theta0 =np.array(0.1, requires_grad=True)
 ###the shape we want is tensor([...], requires_grad=true)
 theta0=np.random.rand(1)
-params0=np.random.rand(3*d*qubits+2*qubits) #np.array([theta0]*(3*d*qubits+2*qubits))
+params0all=np.random.rand(3*d*qubits+2*qubits) #np.array([theta0]*(3*d*qubits+2*qubits))
 
 electrons=2
 #dev=qml.device('default.qubit', wires=qubits)
 
 dev = qml.device("cirq.mixedsimulator", wires=qubits)
+#import qiskit
+#import qiskit.providers.aer.noise as noise
+
+# create a bit flip error with probability p = 0.01
+#p = 0.01
+#my_bitflip = noise.pauli_error([('X', p), ('I', 1 - p)])
+
+# create an empty noise model
+#my_noise_model = noise.NoiseModel()
+
+# attach the error to the hadamard gate 'h'
+#my_noise_model.add_quantum_error(my_bitflip, ['h'], [0])
+
+#dev = qml.device('qiskit.aer', wires=1, noise_model = my_noise_model)
+
 GS=[]
 Hams=[]
 
@@ -54,12 +70,13 @@ sn=[]
 st=[]
 sdictvarg={}
 
+
 sarray=np.linspace(0, 1, ssteps) 
 
 # available_data = qml.data.list_datasets()["qchem"][mol]["STO-3G"]
 # bdl_array=available_data[1:2]
 
-bdl_array=np.linspace(-1, 10, 10)
+bdl_array=np.linspace(-1, 1, 6)
 
 
 def MOL_H_BUILD(mol, bdl):
@@ -281,14 +298,14 @@ for b, bdl in enumerate(bdl_array):
     Hit, H0it, gsE=XX_HAM(qubits, bdl)
     Hams.append(Hit)
     GS.append(gsE)
-    
-    kn, kE, thetas, kt, kgrad, kavggrad, kprobs, knprobs, kvar, kallenergy=kandala_VQE(params0, d, Hvqe=Hit, gradDetect=True)
+    params=params0all
+    kn, kE, thetas, kt, kgrad, kavggrad, kprobs, knprobs, kvar, kallenergy=kandala_VQE(params, d, Hvqe=Hit, gradDetect=True)
 
-    
-
-    fig, (ax1, ax2) = plt.subplots(2)
-    ax1.plot(np.linspace(0, kn, kn+1), kallenergy, label='b='+str(b))
-    # ax2.plot(knprobs, kprobs, 'b.', label='problem points')
+    fig, (ax1) = plt.subplots(1)
+    ax1.plot(np.linspace(0, kn, kn+1), kallenergy, c='r', marker=1, label='HEA VQE')
+    ax1.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0)
+    ax1.set_title('VQE E vs iteration')
+    #ax2.plot(knprobs, kprobs, 'b.', label='problem points')
     # ax1.plot(np.linspace(0, kn, kn+1) ,kavggrad,label='avg grad'  )
     # ax1.plot(np.linspace(0, kn, kn+1) ,kgrad, label='min grad' )
     # ax2.plot(np.linspace(0, kn, kn+1) ,kvar, label='var' )
@@ -300,12 +317,13 @@ for b, bdl in enumerate(bdl_array):
     kenergy.append(kE)
     ktimes.append(kt)
     sEplotlist=[]
-    params0=np.random.rand(3*d*qubits+2*qubits)
+    
     
 ###comment out_ Strg #
     sntot=0
+    params=params0all
     for sind, sit in enumerate(sarray):    
-        n, E,thetas, ts, svarg, senergies=AA_VQE(params0, d, Hvqe=Hit, H0vqe=H0it, svqe=sit, gradDetect=False )
+        n, E,thetas, ts, svarg, senergies=AA_VQE(params, d, Hvqe=Hit, H0vqe=H0it, svqe=sit, gradDetect=False )
 
         senergy.append(E)
         sangle.append(thetas)
@@ -313,20 +331,27 @@ for b, bdl in enumerate(bdl_array):
         st.append(ts)
         sdictvarg.update({"sit_is_"+str(sit): svarg}) 
         print("it solution", n)
-        params0=thetas
+        params=thetas
         sntot=sntot+n+1
         sEplotlist=sEplotlist+senergies
         
-    
+
     print('AAVQE solution', senergy[-1])
+    print()
     # print('sntot is', sntot)
     # print('saved energies is', len(sEplotlist))
-    ax2.plot(np.linspace(0, sntot, sntot), np.array(sEplotlist))
+    ax1.plot(np.linspace(0, sntot, sntot), np.array(sEplotlist), c='blue', marker=3,label='AAVQE' )
+    filename='AAVQE_HEA_'+HNAME+'_lambda='+str(np.around(bdl, 2))+'cirqnoise'+'.png'
+    script_path = os.path.abspath(__file__)
+    save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
+    completename = os.path.join(save_path, filename) 
+    #print(completename)
+    plt.savefig(completename)
 
-plt.legend()
-plt.show()
+#plt.legend()
+#plt.show()
 ###save stuff
-data={'GSE': GS,'ssteps':ssteps,'sits': sn, 'senergy':senergy, 'sangles':sangle,'stimes':st,'s_vars':sdictvarg ,'kits':kits, 'kenergy':kenergy, 'kangle':kangles, 'ktimes': ktimes, 'k_vars': kvarg, 'number_interd': numpoints, 'interatom_d': bdl_array, 'init_kparam': params0, 'Hams': Hams, 'ansatz_depth': d, 'solver':'GD_0.04' , 'max_iterations': mit, 'conv_tol': ctol}
+data={'GSE': GS,'ssteps':ssteps,'sits': sn, 'senergy':senergy, 'sangles':sangle,'stimes':st,'s_vars':sdictvarg ,'kits':kits, 'kenergy':kenergy, 'kangle':kangles, 'ktimes': ktimes, 'k_vars': kvarg, 'number_interd': numpoints, 'interatom_d': bdl_array, 'init_kparam': params0all, 'Hams': Hams, 'ansatz_depth': d, 'solver':'GD_0.04' , 'max_iterations': mit, 'conv_tol': ctol}
 
 if ifsave==True:
     filename='kandala_'+mol+'_'+str(numpoints)+'_iads.pkl'
