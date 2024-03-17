@@ -1,0 +1,65 @@
+lessons learned: AAVQE can be MUCH slower bc the initial guess is bad - saved two itarations, the first a standard test where the plot is \lambda=-1, max its =200. The rest is just a test of when Kandala VQE gets the adiobatic initial Hamiltonian instead of the actual desired test. its much worse, aka 'simple' doesn't work out for the Paper's tests.
+Also one of these runs kicked INTO a BP after more its??
+
+PS C:\Users\skelt\OneDrive\Documents\GitHub\Algorithm-Research> & C:/Users/skelt/anaconda3/python.exe c:/Users/skelt/OneDrive/Documents/GitHub/Algorithm-Research/Student-Hub/Shawn-Skelton/aavqe/01_code/AAVQE_Kandala_ansatz.py
+bond length -1.0
+17
+HEA solution 16 -2.999552351092714 0.7143623000010848
+actual Ground state energy -3.000000000000003
+it solution 199
+it solution 199
+it solution 199
+it solution 199
+it solution 0
+AAVQE solution -2.9999999999999996
+bond length 0.0
+1
+HEA solution 0 -3.0 0.039312400156632066
+actual Ground state energy -3.000000000000001
+it solution 199
+it solution 199
+it solution 199
+it solution 199
+it solution 0
+AAVQE solution -2.9999999999999996
+bond length 1.0
+1
+HEA solution 0 -3.0000000000000004 0.046464100014418364
+actual Ground state energy -3.000000000000003
+it solution 199
+it solution 199
+it solution 199
+it solution 199
+it solution 199
+AAVQE solution 1.0
+PS C:\Users\skelt\OneDrive\Documents\GitHub\Algorithm-Research> & C:/Users/skelt/anaconda3/python.exe c:/Users/skelt/OneDrive/Documents/GitHub/Algorithm-Research/Student-Hub/Shawn-Skelton/aavqe/01_code/AAVQE_Kandala_ansatz.py
+bond length -1.0
+200
+HEA solution 199 6.999999999999999 6.900644100038335
+actual Ground state energy -3.000000000000003
+it solution 199
+it solution 199
+it solution 199
+it solution 199
+it solution 0
+AAVQE solution -1.0000000000000002
+bond length 0.0
+200
+HEA solution 199 -0.9997420560397371 6.887958299834281
+actual Ground state energy -3.000000000000001
+it solution 199
+it solution 199
+it solution 199
+it solution 199
+it solution 0
+AAVQE solution -3.0
+bond length 1.0
+200
+HEA solution 199 3.404555517533545 7.163485000142828
+actual Ground state energy -3.000000000000003
+it solution 199
+it solution 199
+it solution 199
+it solution 199
+it solution 199
+AAVQE solution 0.9999999999999999
