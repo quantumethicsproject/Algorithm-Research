@@ -19,5 +19,5 @@ rng_seed = 0
 batch_size = 1
 
 NOISE_MODEL = "FakeManila"
-OPTIMIZER = f"COBYLA"
-# OPTIMIZER = f"SGD_lr={eta}"
+# OPTIMIZER = f"COBYLA"
+OPTIMIZER = f"SGD_lr={eta}"

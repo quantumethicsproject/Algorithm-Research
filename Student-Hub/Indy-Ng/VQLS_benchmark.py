@@ -40,7 +40,7 @@ for i in range(1):
     print(f"running trial {i}...")
     # %%
     # define the problem we want to perform our experiment on
-    n_qubits = 4
+    n_qubits = 5
     error = 1.6 * 10**-3
     cond_num = 2
 

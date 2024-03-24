@@ -37,7 +37,7 @@ def configured_backend():
 
 # %%
 # define the problem we want to perform our experiment on
-n_qubits = 2
+n_qubits = 3
 error = 1.6 * 10**-3
 cond_num = 2
 
@@ -139,6 +139,8 @@ while err > error:
     cost_history.append(cost)
 
     if  abs(prev_err - err) < 10**-9:
+        break
+    if time.time() - start > 20000:
         break
 
     prev_err = err
