@@ -37,8 +37,9 @@ def configured_backend():
 
 # %%
 # define the problem we want to perform our experiment on
-n_qubits = 3
-error = 1.6 * 10**-3
+
+n_qubits = 2
+error =  1.6 * 10**-3
 cond_num = 2
 
 # problem = IsingProblem(n_qubits=n_qubits, J=0.1, cond_num=cond_num)
@@ -97,6 +98,50 @@ local_hadamard_test = qml.QNode(local_hadamard_test, dev_mu, interface="autograd
 #     w1 = res.x
 #     calc_err(n_qubits, cost_history2[-1], cond_num)
 
+from bin.inference import get_cprobs, get_qprobs
+c_probs = get_cprobs(problem)
+
+# dev_x = qml.device("qiskit.remote", wires=n_qubits, backend=configured_backend())
+dev_x = qml.device("default.mixed", wires=n_qubits, shots=n_shots)
+if NOISE_MODEL == "Bitflip=0.01":
+    dev_x = qml.transforms.insert(
+        dev_x,
+        qml.BitFlip,
+        noise_strength
+    )
+
+def prepare_and_sample(problem, weights):
+
+    # Variational circuit generating a guess for the solution vector |x>
+    problem.variational_block(weights)
+
+    # We assume that the system is measured in the computational basis.
+    # then sampling the device will give us a value of 0 or 1 for each qubit (n_qubits)
+    # this will be repeated for the total number of shots provided (n_shots)
+    return qml.sample()
+
+def get_qprobs(problem, w, device):
+    sampler = qml.QNode(prepare_and_sample, device)
+
+    # sampler = mitigate_node(sampler)
+
+    raw_samples = sampler(problem, w)
+    # raw_samples = np.concatenate(raw_samples, axis=0)# FOR BATCHING
+
+    # convert the raw samples (bit strings) into integers and count them
+    samples = []
+    for sam in raw_samples:
+        samples.append(int("".join(str(bs) for bs in sam), base=2))
+
+    q_probs = np.bincount(samples, minlength=2**problem.n_qubits) / len(raw_samples)
+    # q_probs = np.bincount(samples, minlength=2**problem.n_qubits) / n_shots
+
+    return q_probs
+
+def hellinger(p,q):
+    """Hellinger distance between distributions"""
+    return np.sqrt(np.sum(np.sqrt(p) - np.sqrt(q))**2)/np.sqrt(2)
+
 # %%
 from IPython.display import clear_output
 
@@ -118,10 +163,12 @@ prev_err = 0
 
 ERR_1000 = None
 TTS_1000 = None
+EAD_history = []
+EAD = 999
 
 start = time.time()
-while err > error:
-# for it in range(steps):
+while EAD > error:
+# for it in range(1): 
     # w, cost = opt.step_and_cost(cost_agg, w)
     w, cost = opt.step_and_cost(lambda w: cost_loc(problem, w, local_hadamard_test), w)
     # w, cost = opt.step_and_cost(lambda w: cost_global(problem, w, local_hadamard_test, hadamard_overlap_test), w)
@@ -137,6 +184,11 @@ while err > error:
 
     print("Step {:3d}       Cost_L = {:9.7f} \t error = {:9.7f}".format(it, cost, err), flush=True)
     cost_history.append(cost)
+
+    if it % 30 == 1:
+        q_probs = get_qprobs(problem, best_w, dev_x)
+        EAD = hellinger(c_probs, q_probs)
+        EAD_history.append(np.real(EAD.item()))
 
     if  abs(prev_err - err) < 10**-9:
         break
@@ -189,46 +241,12 @@ plt.show()
 # Qualitatively, it's converging slower than the toy problem, suggesting more iterations are needed
 
 # %%
-from bin.inference import get_cprobs, get_qprobs
-c_probs = get_cprobs(problem)
-
-# dev_x = qml.device("qiskit.remote", wires=n_qubits, backend=configured_backend())
-dev_x = qml.device("default.qubit", wires=n_qubits, shots=n_shots)
-
-def prepare_and_sample(problem, weights):
-
-    # Variational circuit generating a guess for the solution vector |x>
-    problem.variational_block(weights)
-
-    # We assume that the system is measured in the computational basis.
-    # then sampling the device will give us a value of 0 or 1 for each qubit (n_qubits)
-    # this will be repeated for the total number of shots provided (n_shots)
-    return qml.sample()
-
-def get_qprobs(problem, w, device):
-    sampler = qml.QNode(prepare_and_sample, device)
-
-    # sampler = mitigate_node(sampler)
-
-    raw_samples = sampler(problem, w)
-    # raw_samples = np.concatenate(raw_samples, axis=0)# FOR BATCHING
-
-    # convert the raw samples (bit strings) into integers and count them
-    samples = []
-    for sam in raw_samples:
-        samples.append(int("".join(str(bs) for bs in sam), base=2))
-
-    q_probs = np.bincount(samples, minlength=2**problem.n_qubits) / len(raw_samples)
-    # q_probs = np.bincount(samples, minlength=2**problem.n_qubits) / n_shots
-
-    return q_probs
-
 
 q_probs = get_qprobs(problem, best_w, dev_x)
 # q_probs2 = get_qprobs(problem, w1, dev_x)
 
 # %%
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(7, 4))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7, 4))
 
 ax1.bar(np.arange(0, 2 ** n_qubits), c_probs, color="blue")
 ax1.set_xlim(-0.5, 2 ** n_qubits - 0.5)
@@ -240,27 +258,24 @@ ax2.set_xlim(-0.5, 2 ** n_qubits - 0.5)
 ax2.set_xlabel("Hilbert space basis")
 ax2.set_title("Quantum probabilities")
 
-# ax3.bar(np.arange(0, 2 ** n_qubits), q_probs2, color="green")
-# ax3.set_xlim(-0.5, 2 ** n_qubits - 0.5)
-# ax3.set_xlabel("Hilbert space basis")
-# ax3.set_title("Quantum probabilities")
-
 plt.show()
 
 # %%
 result = {
     "problem": str(problem),
     "n_qubits": n_qubits,
-    # "ansatz": f"{problem.n_layers}-layer HEA",
+    "ansatz": f"{problem.n_layers}-layer HEA",
     "cost": "local",
     "optimizer": OPTIMIZER,
     "cond_num": cond_num,
     "error_threshold": error,
     "noise_model": NOISE_MODEL,
     "TTS": TTS,
-    "STS": len(cost_history2) if OPTIMIZER == "COBYLA" else len(cost_history),
+    "STS": len(cost_history),
+    "final_EAD": EAD_history[-1],
+    "EAD_history": list(EAD_history),
     "final_error": calc_err(n_qubits, cost_history[-1], cond_num).item(),
-    "cost_history": list(cost_history) if OPTIMIZER != "COBYLA" else [tensor.item() for tensor in cost_history2],
+    "cost_history": list(cost_history),
     "model_weights": list(w1) if OPTIMIZER == "COBYLA" else list(w.numpy()),
     "init_weights": init_weights
 }
@@ -269,7 +284,7 @@ result = {
 # # serialize to JSON?
 import json
 
-with open('data/Toy_SGD_FakeManila.json', 'a') as fp:
+with open('data/Toy_SGD_lr=1_Bitflip=0.01_v2.json', 'a') as fp:
     fp.write(",")
     json.dump(result, fp)
 
