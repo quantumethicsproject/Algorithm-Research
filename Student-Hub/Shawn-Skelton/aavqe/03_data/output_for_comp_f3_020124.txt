@@ -1,0 +1,92 @@
+Output for a run of the XX hamiltonians solved with VQE using HEA. 20 lambda's ranging from from -1, 1,actual GSE is computed with exact diagonalization. Some instances reach the GSE within chemical accuracy, some do not.
+
+I didn't save the initial point, which wqas randomly selected and the same for every instance within the accompanying figure.
+
+  
+PS C:\Users\skelt\OneDrive\Documents\GitHub\Algorithm-Research> & C:/Users/skelt/anaconda3/python.exe c:/Users/skelt/OneDrive/Documents/GitHub/Algorithm-Research/Student-Hub/Shawn-Skelton/aavqe/01_code/AAVQE_Kandala_ansatz.py
+[-1.         -0.89473684 -0.78947368 -0.68421053 -0.57894737 -0.47368421
+ -0.36842105 -0.26315789 -0.15789474 -0.05263158  0.05263158  0.15789474
+  0.26315789  0.36842105  0.47368421  0.57894737  0.68421053  0.78947368
+  0.89473684  1.        ]
+bond length -1.0
+14
+HEA solution 13 -2.99965862529254 0.3136446001008153
+actual Ground state energy -3.000000000000003
+bond length -0.8947368421052632
+39
+HEA solution 38 -2.989443485361425 0.8152095000259578
+actual Ground state energy -3.0000000000000018
+bond length -0.7894736842105263
+30
+HEA solution 29 -2.999046962700469 0.6321373002137989
+actual Ground state energy -3.0000000000000018
+bond length -0.6842105263157895
+22
+HEA solution 21 -2.999996967838218 0.43963300017639995
+actual Ground state energy -3.0000000000000018
+bond length -0.5789473684210527
+17
+HEA solution 16 -2.9999989668186178 0.37472810014151037
+actual Ground state energy -2.9999999999999982
+bond length -0.4736842105263158
+15
+HEA solution 14 -2.99990925415859 0.30133849987760186
+actual Ground state energy -3.000000000000005
+bond length -0.368421052631579
+13
+HEA solution 12 -2.9993788841054227 0.2606756999157369
+actual Ground state energy -3.000000000000011
+bond length -0.26315789473684215
+101
+HEA solution 100 -2.9963439086314945 2.1153943999670446
+actual Ground state energy -3.000000000000001
+bond length -0.1578947368421053
+69
+HEA solution 68 -2.9988007738231035 1.3973008000757545
+actual Ground state energy -3.0000000000000018
+bond length -0.052631578947368474
+16
+HEA solution 15 -2.9982889329397753 0.3540030000731349
+actual Ground state energy -3.000000000000007
+bond length 0.05263157894736836
+20
+HEA solution 19 -2.999639699077899 0.39578720019198954
+actual Ground state energy -3.0000000000000044
+bond length 0.1578947368421053
+23
+HEA solution 22 -2.99896468965201 0.49053209996782243
+actual Ground state energy -3.0000000000000018
+bond length 0.26315789473684204
+25
+HEA solution 24 -2.997489974957417 0.4952801000326872
+actual Ground state energy -3.0000000000000187
+bond length 0.36842105263157876
+25
+HEA solution 24 -2.950317652335273 0.5220460998825729
+actual Ground state energy -3.0
+bond length 0.4736842105263157
+31
+HEA solution 30 -2.9961098504563872 0.6435490001458675
+actual Ground state energy -2.999999999999999
+bond length 0.5789473684210527
+39
+HEA solution 38 -2.998356315993779 0.803640800062567
+actual Ground state energy -2.9999999999999982
+bond length 0.6842105263157894
+52
+HEA solution 51 -2.998301702889926 1.0591138999443501
+actual Ground state energy -3.0000000000000044
+bond length 0.7894736842105261
+80
+HEA solution 79 -2.9982737606024936 1.6556414000224322
+actual Ground state energy -3.0000000000000067
+bond length 0.894736842105263
+2000
+HEA solution 1999 -2.643176119527802 41.63210509996861
+actual Ground state energy -3.0000000000000098
+bond length 1.0
+2000
+HEA solution 1999 0.9999996190895567 42.19957109983079
+actual Ground state energy -3.000000000000003
+
+
