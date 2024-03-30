@@ -4,6 +4,8 @@ Created on Fri Aug  4 21:05:48 2023
 
 @author: skelt
 """
+
+# from qiskit_ibm_provider import IBMProvider
 from qiskit.providers.fake_provider import *
 import pennylane as qml
 from pennylane import numpy as np
@@ -12,6 +14,7 @@ import time
 #import matplotlib.pyplot as plt
 import pickle
 import os.path
+from scipy.linalg import expm
 
 import matplotlib.pyplot as plt
 from pennylane_cirq import ops as cirq_ops
@@ -28,12 +31,12 @@ d=1
 ctol=1.6*10**(-3)
 mit=200
 ssteps=20
-p=0.05
+p=0.01
 
 ###want to automate eventually:
-qubits=7
-HNAME='XX7'
-NMODEL="depolcirq=0.05"
+qubits=3
+HNAME='XX3'
+NMODEL="FakeManila"
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
 
 ###JEFF'S NOISE MODEL CODE###
@@ -45,8 +48,8 @@ def configured_backend():
 
 # create our devices to run our circuits on
 noise_strength = p
-dev_mu = qml.device("default.mixed", wires=qubits)
-if NMODEL == "Bitflip=0.05":
+dev_mu = qml.device("default.mixed", wires=qubits+1)
+if NMODEL == "Bitflip=0.01":
     dev_mu = qml.transforms.insert(
         dev_mu,
         qml.BitFlip,
@@ -59,9 +62,8 @@ if NMODEL == "FakeManila":
 params0all=np.random.rand(3*d*qubits+2*qubits) #np.array([theta0]*(3*d*qubits+2*qubits))
 
 electrons=2
-dev=qml.device('default.qubit', wires=qubits)
+dev=qml.device('default.mixed', wires=qubits)
 devcirq = qml.device("cirq.mixedsimulator", wires=qubits)
-
 
 GS=[]
 
@@ -75,7 +77,7 @@ sarray=np.linspace(0, 1, ssteps)
 # bdl_array=available_data[1:2]
 
 bdl_array=np.linspace(-1, 1, numpoints)
-
+print(bdl_array)
 
 def MOL_H_BUILD(mol, bdl):
     part = qml.data.load("qchem", molname=mol, basis="STO-3G", bondlength=bdl, attributes=["molecule", "hamiltonian", "fci_energy"])[0]
@@ -123,6 +125,8 @@ def XX_HAM(sites, lamb):
 
 Hdef,H0def, gsEdef=XX_HAM(qubits, bdl_array[0])
 sdef=1
+
+
 #####hardware efficient ansatz
 def U_ENT(wires):
     """
@@ -152,7 +156,7 @@ def kandala_circuit(param, wires, d):
     ###given $\theta_{j i}^q$ $j\in{1, 2, 3}$
     ###as a 1d list the sequence is [\theta_{00}^0, \theta_{10}^0, \theta_{20}^0, \theta_{01}^0...]
     ###all zeros state
-    #qml.BasisState(np.zeros(len(wires)), wires=wires)
+    # qml.BasisState(np.zeros(len(wires)), wires=wires)
     ###apply the first set of Euler rotations, without RZ terms
     indtrack=0
     for q in range(len(wires)):
@@ -171,33 +175,16 @@ def kandala_circuit(param, wires, d):
             #print(indtrack)
         #print(q, indtrack)
         
-def circuit(param, wires):#
-    hf = qml.qchem.hf_state(electrons, qubits)
-    qml.BasisState(hf, wires=wires)
-    qml.DoubleExcitation(param, wires=[0, 1, 2, 3])
 
-def scircuit(param, wires):
-    ###meant to compare AAVQE and VQE for the H2 mol, where a 1param circuit can succeed
-    qml.BasisState(np.zeros(len(wires)), wires=wires)
-    
 ####Kandala cost function
 @qml.qnode(dev, interface="autograd")
 def kandala_cost_fcn(param, H=Hdef):
     kandala_circuit(param, range(qubits), d)
     return qml.expval(H)
 
-@qml.qnode(devcirq, interface="autograd")
+@qml.qnode(dev_mu, interface="autograd")
 def kandala_cost_fcn_noise(param, H=Hdef):
     kandala_circuit(param, range(qubits), d)
-
-    for bit in range(qubits):
-        cirq_ops.Depolarize(p, wires=bit)
-        # cirq_ops.BitFlip(p, wires=bit)
-    return qml.expval(H)
-
-@qml.qnode(dev, interface="autograd")
-def cost_fn(param, H=Hdef):
-    circuit(param, wires=range(qubits))
     return qml.expval(H)
 
 @qml.qnode(dev, interface="autograd")
@@ -205,15 +192,11 @@ def cost_fnAA(param, H=Hdef, H0=H0def, s=sdef):
     kandala_circuit(param, range(qubits), d)
     return qml.expval((1-s)*H0+s*H)    
 
-@qml.qnode(devcirq, interface="autograd")
+@qml.qnode(dev_mu, interface="autograd")
 def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef): 
     kandala_circuit(param, range(qubits), d)
-    for bit in range(qubits):
-        cirq_ops.Depolarize(p, wires=bit)
-        # cirq_ops.BitFlip(p, wires=bit)
     H2=(1-s)*H0+s*H
     return qml.expval(H2)
-    
 
 def BP_DETECT(g,n, bpsteps=False, Fn=1/(9**4)):
     varg=np.var(g)
@@ -329,68 +312,67 @@ def RUN_AA_VQE(sarray, initparams,d, Hit, H0it, cost_fc=cost_fnAA):
         SDATA['fulltimes']=st
         return SDATA, sEplotlist
 
-##main loop
-data={'GSE': GS,'ssteps':ssteps, 'noisetype':NMODEL, 'noiseparam':p ,'interatom_d': bdl_array, 'init_kparam': params0all,  'ansatz_depth': d, 'solver':'GD_0.04' , 'max_iterations': mit, 'conv_tol': ctol}
-
+#main loop
 for b, bdl in enumerate(bdl_array):
     print('bond length', bdl)
-    Hit, H0it, gsE=XX_HAM(qubits, bdl)
-    GS.append(gsE)
+    # Hit, H0it, gsE=XX_HAM(qubits, bdl)
+    # GS.append(gsE)
 
-    bdictname='b_'+str(np.around(bdl))+'_data'
-    params=params0all
-    KDATA=kandala_VQE(params, d, Hvqe=Hit, gradDetect=True, max_iterations=mit*ssteps)
-    kallenergy=KDATA['energies']
-
-    params=params0all
-    NKDATA=kandala_VQE(params, d, Hvqe=Hit, cost_fc=kandala_cost_fcn_noise, max_iterations=mit*ssteps)
-    Nkits.append(NKDATA['its'])
-    Nkenergy.append(NKDATA['gsEest'])
-    Nkallenergy=NKDATA['energies']
-    print('noisy done', Nkits[-1])
+    # bdictname='b_'+str(bdl)+'_data'
+    # bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, }
     
-    ###make a figure with some subplots
-    fig, (ax1, ax2, ax3) = plt.subplots(3)
+    # params=params0all
+    # KDATA=kandala_VQE(params, d, Hvqe=Hit, gradDetect=True, max_iterations=mit*ssteps)
+    # kallenergy=KDATA['energies']
+
+    # params=params0all
+    # NKDATA=kandala_VQE(params, d, Hvqe=Hit, cost_fc=kandala_cost_fcn_noise, max_iterations=mit*ssteps)
+    # Nkits.append(NKDATA['its'])
+    # Nkenergy.append(NKDATA['gsEest'])
+    # Nkallenergy=NKDATA['energies']
+    # print('noisy done', Nkits[-1])
     
-    ax1.plot(np.linspace(0, Nkits[-1], Nkits[-1]+1), Nkallenergy, c='r', marker=1, label='Noisy HEA VQE')
-    ax1.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
-
-    ax2.plot(np.linspace(0, Nkits[-1], Nkits[-1]+1), Nkallenergy, c='r', marker=1, label='Noisy HEA VQE')
-    ax2.plot(np.linspace(0, KDATA['its'], KDATA['its']+1), kallenergy, c='blue', marker=1, label='HEA VQE')
-    ax2.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
-
-    ax1.set_title('VQE E vs iteration')
-    ax1.set_ylabel(r'$\braket{U^{\dag}(\theta)e^{iH}U(\theta)}$')
-    ax1.set_xlabel(r'iteration $n$')
-
-    SDATA, sEplotlist=RUN_AA_VQE(sarray, params0all, d, Hit, H0it, )
-    NSDATA, NsEplotlist=RUN_AA_VQE(sarray, params, d, Hit, H0it,  cost_fc=cost_fnAA_noise )
-    print('noisy AAVQE done')
+    # ###make a figure with some subplots
+    # fig, (ax1, ax2, ax3) = plt.subplots(3)
     
-    ax1.plot(np.linspace(0, NSDATA['fulln'], NSDATA['fulln']), np.array(NsEplotlist), c='blue', marker=3,label='Noisy AAVQE' )
-    filename='AAVQE_HEA_'+HNAME+'_lambda='+str(np.around(bdl, 2))+NMODEL+'.png'
+    # ax1.plot(np.linspace(0, Nkits[-1], Nkits[-1]+1), Nkallenergy, c='r', marker=1, label='Noisy HEA VQE')
+    # ax1.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
 
-    ax3.plot(np.linspace(0, SDATA['fulln'], SDATA['fulln']), np.array(sEplotlist), c='r', marker=1, label='AAVQE')
-    ax3.plot(np.linspace(0, NSDATA['fulln'], NSDATA['fulln']), np.array(NsEplotlist), c='blue', marker=2, label='Noisy AAVQE')
+    # ax2.plot(np.linspace(0, Nkits[-1], Nkits[-1]+1), Nkallenergy, c='r', marker=1, label='Noisy HEA VQE')
+    # ax2.plot(np.linspace(0, KDATA['its'], KDATA['its']+1), kallenergy, c='blue', marker=1, label='HEA VQE')
+    # ax2.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
+
+    # ax1.set_title('VQE E vs iteration')
+    # ax1.set_ylabel(r'$\braket{U^{\dag}(\theta)e^{iH}U(\theta)}$')
+    # ax1.set_xlabel(r'iteration $n$')
+
+    # SDATA, sEplotlist=RUN_AA_VQE(sarray, params0all, d, Hit, H0it, )
+    # NSDATA, NsEplotlist=RUN_AA_VQE(sarray, params, d, Hit, H0it,  cost_fc=cost_fnAA_noise )
+    # print('noisy AAVQE done', NSDATA['fulln'])
     
-    ax3.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
+    # ax1.plot(np.linspace(0, NSDATA['fulln'], NSDATA['fulln']), np.array(NsEplotlist), c='blue', marker=3,label='Noisy AAVQE' )
+    # filename='AAVQE_HEA_'+HNAME+'_lambda='+str(np.around(bdl, 2))+'IBMnoise'+'.png'
 
-    script_path = os.path.abspath(__file__)
-    save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
-    completename = os.path.join(save_path, filename) 
-    if ifsave==True:
-        plt.savefig(completename)
-    bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
-    data[bdictname]=bdict
-
-plt.legend()
-###save stuff
-
-if ifsave==True:
-    filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_'+str(numpoints)+'_iads.pkl'
-    script_path = os.path.abspath(__file__)
-    save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
-    completename = os.path.join(save_path, filename) 
+    # ax3.plot(np.linspace(0, SDATA['fulln'], SDATA['fulln']), np.array(sEplotlist), c='r', marker=1, label='AAVQE')
+    # ax3.plot(np.linspace(0, NSDATA['fulln'], NSDATA['fulln']), np.array(NsEplotlist), c='blue', marker=2, label='Noisy AAVQE')
     
-    with open(completename,'wb') as file:
-        pickle.dump(data, file)
+    # ax3.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
+
+    # script_path = os.path.abspath(__file__)
+    # save_path=script_path.replace("01_code\AAVQE_manilanoise.py", "03_data")
+    # completename = os.path.join(save_path, filename) 
+    # if ifsave==True:
+    #     plt.savefig(completename)
+
+
+##save stuff
+
+# if ifsave==True:
+#     data={'GSE': GS,'ssteps':ssteps, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA,'noisetype':NMODEL, 'noiseparam':p ,'interatom_d': bdl_array, 'init_kparam': params0all,  'ansatz_depth': d, 'solver':'GD_0.04' , 'max_iterations': mit, 'conv_tol': ctol}
+#     filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_'+str(numpoints)+'_iads.pkl'
+#     script_path = os.path.abspath(__file__)
+#     save_path=script_path.replace("01_code\AAVQE_IBMnoise.py", "03_data")
+#     completename = os.path.join(save_path, filename) 
+    
+#     with open(completename,'wb') as file:
+#         pickle.dump(data, file)
