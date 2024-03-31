@@ -18,7 +18,8 @@ rng_seed = 0
 # exploit param broadcasting
 batch_size = 1
 
-NOISE_MODEL = "FakeManila"
+# NOISE_MODEL = "FakeManila"
+NOISE_MODEL = None
 # NOISE_MODEL = "Bitflip=0.05"
 # OPTIMIZER = f"COBYLA"
 OPTIMIZER = f"SGD_lr={eta}"
