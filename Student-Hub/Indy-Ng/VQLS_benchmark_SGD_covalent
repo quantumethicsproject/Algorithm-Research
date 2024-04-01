@@ -34,7 +34,6 @@ def configured_backend():
 # %%
 pauli_dict = {"I": Identity.compute_matrix(), "X": PauliX.compute_matrix(), "Y": PauliY.compute_matrix(), "Z": PauliZ.compute_matrix()}
 
-
 def A_to_num (n_qubits: int, coefs: np.tensor, terms: List[str]):
     """
     Given an array of coeffs c and an array of A_l formatted as a list of strings, return A
@@ -68,6 +67,7 @@ def A_to_num (n_qubits: int, coefs: np.tensor, terms: List[str]):
         
     return mat
 
+@ct.electron
 def generate_weights(n_qubits:int, layers:int, q_delta:float):
     if n_qubits <= 0:
         raise ValueError("Number of qubits is not a number greater than 0.")
@@ -85,6 +85,7 @@ def generate_weights(n_qubits:int, layers:int, q_delta:float):
 
     return init_weights, weights, w
 
+@ct.electron
 def reshape_weights(n_qubits:int, n_parameters:int, layers:int, w):
     shapes = qml.SimplifiedTwoDesign.shape(n_layers=layers, n_wires=n_qubits)
 
@@ -107,7 +108,7 @@ def b_to_num(problem):
 
 
 # This function technically works BUT needs to be tested + optimized further
-
+@ct.electron
 def A_to_code (idx, ancilla_idx, terms: List[str], offset=0):
 
     if idx < 0:
@@ -291,7 +292,7 @@ def psi_norm(weights, c, local_hadamard_test, problem):
 
     return abs(norm)
 
-ct.electron
+@ct.electron
 def cost_loc(problem, weights, local_hadamard_test):
     """Local version of the cost function. Tends to zero when A|x> is proportional to |b>."""
 
@@ -377,7 +378,7 @@ def calc_err(n_qubits: int, cost: float, cond_number: float) -> float:
 from IPython.display import clear_output
 
 @ct.electron
-def train(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hadamard_test):
+def train_func(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hadamard_test):
     opt = qml.GradientDescentOptimizer(eta)
     # opt = qml.AdagradOptimizer(eta)
     # opt = qml.AdamOptimizer(eta) # TODO: tune decay terms
@@ -399,10 +400,8 @@ def train(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hadamard_
 
     start = time.time()
     while EAD > error:
-    # for it in range(1): 
-        # w, cost = opt.step_and_cost(cost_agg, w)
+    # for it in range(5): 
         w, cost = opt.step_and_cost(lambda w: cost_loc(problem, w, local_hadamard_test), w)
-        # w, cost = opt.step_and_cost(lambda w: cost_global(problem, w, local_hadamard_test, hadamard_overlap_test), w)
 
         err = calc_err(n_qubits, cost, cond_num)
         if err < best_err:
@@ -416,7 +415,7 @@ def train(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hadamard_
         print("Step {:3d}       Cost_L = {:9.7f} \t error = {:9.7f}".format(it, cost, err), flush=True)
         cost_history.append(cost.item())
 
-        if it % 20 == 1:
+        if it % 3 == 1:
             q_probs = get_qprobs(problem, best_w, dev_x)
             EAD = hellinger(c_probs, q_probs)
             EAD_history.append(np.real(EAD.item()))
@@ -428,9 +427,9 @@ def train(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hadamard_
 
         prev_err = err
 
-        if it == 1000:
-            ERR_1000 = err
-            TTS_1000 = time.time() - start
+        # if it == 1000:
+        #     ERR_1000 = err
+        #     TTS_1000 = time.time() - start
 
         it += 1
 
@@ -469,14 +468,16 @@ def workflow(local_hadamard_test, n_qubits = 2, error =  1.6 * 10**-3, n_shots=1
     # local_hadamard_test = ct.qelectron(local_hadamard_test, executor=[INSERT SOME REAL BACKEND HERE])
     # local_hadamard_test = mitigate_node(local_hadamard_test)
 
-    best_w, cost_history, EAD_history, TTS = train(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hadamard_test)
+    # best_w, cost_history, EAD_history, TTS = train_func(w)
+    best_w, cost_history, EAD_history, TTS = train_func(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hadamard_test)
 
     return {
         "cost_history": cost_history,
         "EAD_history": EAD_history,
         "TTS": TTS,
+        "init_weights": 0,
         "init_weights": init_weights,
-        "model_weights": list(best_w.numpy()),
+        "model_weights": best_w,
     }
 
 # %%
@@ -490,34 +491,34 @@ res.result
 
 
 # %%
-result = {
-    "problem": str(problem),
-    "n_qubits": n_qubits,
-    "ansatz": f"{problem.n_layers}-layer HEA",
-    "cost": "local",
-    "optimizer": OPTIMIZER,
-    "cond_num": cond_num,
-    "error_threshold": error,
-    "noise_model": NOISE_MODEL,
-    "TTS": TTS,
-    "STS": len(cost_history),
-    "final_EAD": EAD_history[-1],
-    "EAD_history": list(EAD_history),
-    "final_error": calc_err(n_qubits, cost_history[-1], cond_num).item(),
-    "cost_history": list(cost_history),
-    "model_weights": list(w1) if OPTIMIZER == "COBYLA" else list(w.numpy()),
-    "init_weights": init_weights
-}
+# result = {
+#     "problem": str(problem),
+#     "n_qubits": n_qubits,
+#     "ansatz": f"{problem.n_layers}-layer HEA",
+#     "cost": "local",
+#     "optimizer": OPTIMIZER,
+#     "cond_num": cond_num,
+#     "error_threshold": error,
+#     "noise_model": NOISE_MODEL,
+#     "TTS": TTS,
+#     "STS": len(cost_history),
+#     "final_EAD": EAD_history[-1],
+#     "EAD_history": list(EAD_history),
+#     "final_error": calc_err(n_qubits, cost_history[-1], cond_num).item(),
+#     "cost_history": list(cost_history),
+#     "model_weights": list(w1) if OPTIMIZER == "COBYLA" else list(w.numpy()),
+#     "init_weights": init_weights
+# }
 
-# %%
-# # serialize to JSON?
-import json
+# # %%
+# # # serialize to JSON?
+# import json
 
-with open(f'data/Toy_SGD_lr=1_{NOISE_MODEL}.json', 'a') as fp:
-    fp.write(",")
-    json.dump(result, fp)
+# with open(f'data/Toy_SGD_lr=1_{NOISE_MODEL}.json', 'a') as fp:
+#     fp.write(",")
+#     json.dump(result, fp)
 
-# %%
+# # %%
 
 
 
