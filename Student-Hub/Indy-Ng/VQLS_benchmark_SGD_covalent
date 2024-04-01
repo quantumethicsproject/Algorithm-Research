@@ -23,6 +23,8 @@ from abc import ABC, abstractmethod
 NOISE_MODEL = None
 eta = 1
 q_delta = 0.001
+n_qubits = 2
+n_shots = 10**4
 
 # %%
 def configured_backend():
@@ -30,6 +32,16 @@ def configured_backend():
     backend = FakeManila()
     # backend.options.update_options(...)
     return backend
+
+# create our devices to run our circuits on
+dev_mu = qml.device("default.mixed", wires=n_qubits+1)
+dev_x = qml.device("default.mixed", wires=n_qubits, shots=n_shots)
+
+
+# dev_mu = qml.device("default.qubit", wires=n_qubits+1)
+if NOISE_MODEL == "FakeManila":
+    dev_mu = qml.device("qiskit.remote", wires=n_qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
+    dev_x = qml.device("qiskit.remote", wires=n_qubits, backend=configured_backend())
 
 # %%
 pauli_dict = {"I": Identity.compute_matrix(), "X": PauliX.compute_matrix(), "Y": PauliY.compute_matrix(), "Z": PauliZ.compute_matrix()}
@@ -224,6 +236,7 @@ class ToyProblem(Problem):
         return self.A_num, b
 
 # %%
+@qml.qnode(dev_mu, interface="autograd")
 def local_hadamard_test(weights, problem, l=None, lp=None, j=None, part=None):
     """this function implements the local hadamard test for calculating mu and the norm"""
 
@@ -269,7 +282,7 @@ def local_hadamard_test(weights, problem, l=None, lp=None, j=None, part=None):
 
 # Computes the mu coefficients
 @ct.electron
-def mu(weights, local_hadamard_test, problem, l=None, lp=None, j=None):
+def mu(weights, problem, l=None, lp=None, j=None):
     """Generates the coefficients to compute the "local" cost function C_L."""
 
     # start = time.time()
@@ -280,20 +293,20 @@ def mu(weights, local_hadamard_test, problem, l=None, lp=None, j=None):
     return mu_real + 1.0j * mu_imag
 
 @ct.electron
-def psi_norm(weights, c, local_hadamard_test, problem):
+def psi_norm(weights, c, problem):
     """Returns the normalization constant <psi|psi>, where |psi> = A |x>."""
     norm = 0.0
 
     for l in range(0, len(c)):
         for lp in range(0, len(c)):
             # start = time.time()
-            norm = norm + c[l] * np.conj(c[lp]) * mu(weights, local_hadamard_test, problem, l, lp, -1)
+            norm = norm + c[l] * np.conj(c[lp]) * mu(weights, problem, l, lp, -1)
             # print(f"norm accum ({l*len(c) + lp})")
 
     return abs(norm)
 
 @ct.electron
-def cost_loc(problem, weights, local_hadamard_test):
+def cost_loc(problem, weights):
     """Local version of the cost function. Tends to zero when A|x> is proportional to |b>."""
 
     c, _ = problem.get_coeffs()
@@ -306,7 +319,7 @@ def cost_loc(problem, weights, local_hadamard_test):
         for lp in range(0, len(c)):
             for j in range(0, n_qubits):
                 # start2 = time.time()
-                mu_sum = mu_sum + c[l] * np.conj(c[lp]) * mu(weights, local_hadamard_test, problem, l, lp, j)
+                mu_sum = mu_sum + c[l] * np.conj(c[lp]) * mu(weights, problem, l, lp, j)
                 # print(f"mu sum accum ({l*len(c)*len(c) + lp*len(c) + j})")
 
     mu_sum = abs(mu_sum)
@@ -314,13 +327,14 @@ def cost_loc(problem, weights, local_hadamard_test):
 
     # Cost function C_L
     # start = time.time()
-    res = 0.5 - 0.5 * mu_sum / (n_qubits * psi_norm(weights, c, local_hadamard_test, problem))
+    res = 0.5 - 0.5 * mu_sum / (n_qubits * psi_norm(weights, c, problem))
     # print(f"normalize:\t{time.time() - start:.2f}")
     return res
 
 # %%
 # define the problem we want to perform our experiment on
 
+@qml.qnode(dev_x)
 def prepare_and_sample(problem, weights):
 
     # Variational circuit generating a guess for the solution vector |x>
@@ -346,12 +360,13 @@ def get_cprobs(problem):
     return c_probs
 
 @ct.electron
-def get_qprobs(problem, w, device):
-    sampler = qml.QNode(prepare_and_sample, device)
-
+def get_qprobs(problem, w):
+    # sampler = qml.QNode(prepare_and_sample, device)
     # sampler = mitigate_node(sampler)
 
-    raw_samples = sampler(problem, w)
+    raw_samples = prepare_and_sample(problem, w)
+    # raw_samples = sampler(problem, w)
+    print(f"raw samples: {raw_samples}")
     # raw_samples = np.concatenate(raw_samples, axis=0)# FOR BATCHING
 
     # convert the raw samples (bit strings) into integers and count them
@@ -378,7 +393,7 @@ def calc_err(n_qubits: int, cost: float, cond_number: float) -> float:
 from IPython.display import clear_output
 
 @ct.electron
-def train_func(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hadamard_test):
+def train_func(n_qubits, w, error, problem, cond_num, c_probs):
     opt = qml.GradientDescentOptimizer(eta)
     # opt = qml.AdagradOptimizer(eta)
     # opt = qml.AdamOptimizer(eta) # TODO: tune decay terms
@@ -401,7 +416,7 @@ def train_func(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hada
     start = time.time()
     while EAD > error:
     # for it in range(5): 
-        w, cost = opt.step_and_cost(lambda w: cost_loc(problem, w, local_hadamard_test), w)
+        w, cost = opt.step_and_cost(lambda w: cost_loc(problem, w), w)
 
         err = calc_err(n_qubits, cost, cond_num)
         if err < best_err:
@@ -416,7 +431,7 @@ def train_func(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hada
         cost_history.append(cost.item())
 
         if it % 3 == 1:
-            q_probs = get_qprobs(problem, best_w, dev_x)
+            q_probs = get_qprobs(problem, best_w)
             EAD = hellinger(c_probs, q_probs)
             EAD_history.append(np.real(EAD.item()))
 
@@ -440,36 +455,25 @@ def train_func(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hada
 
 # %%
 @ct.lattice(executor="local")
-def workflow(local_hadamard_test, n_qubits = 2, error =  1.6 * 10**-3, n_shots=10**4):
+def workflow(n_qubits = 2, error =  1.6 * 10**-3, n_shots=10**4):
     cond_num = 2
     problem = ToyProblem(n_qubits=n_qubits)
     # problem = IsingProblem(n_qubits=n_qubits, J=0.1, cond_num=cond_num)
 
     # initialize weights
     w = q_delta * np.random.randn(problem.param_shape, requires_grad=True)
-    w1 = w.copy()
     init_weights = list(w.copy().numpy())
     # w = q_delta * np.random.randn(batch_size, problem.param_shape, requires_grad=True)
-
-    # create our devices to run our circuits on
-    dev_mu = qml.device("default.mixed", wires=n_qubits+1)
-    dev_x = qml.device("default.mixed", wires=n_qubits, shots=n_shots)
-
-    # dev_mu = qml.device("default.qubit", wires=n_qubits+1)
-    if NOISE_MODEL == "FakeManila":
-        dev_mu = qml.device("qiskit.remote", wires=n_qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
-        dev_x = qml.device("qiskit.remote", wires=n_qubits, backend=configured_backend())
 
     c_probs = get_cprobs(problem)
 
 
     # in order to make the error mitigation work, we have to pull out the QNode definition outside of the cost function so I'm doing it here
-    local_hadamard_test = qml.QNode(local_hadamard_test, dev_mu, interface="autograd")
     # local_hadamard_test = ct.qelectron(local_hadamard_test, executor=[INSERT SOME REAL BACKEND HERE])
     # local_hadamard_test = mitigate_node(local_hadamard_test)
 
     # best_w, cost_history, EAD_history, TTS = train_func(w)
-    best_w, cost_history, EAD_history, TTS = train_func(n_qubits, w, error, problem, cond_num, dev_x, c_probs, local_hadamard_test)
+    best_w, cost_history, EAD_history, TTS = train_func(n_qubits, w, error, problem, cond_num, c_probs)
 
     return {
         "cost_history": cost_history,
@@ -482,7 +486,7 @@ def workflow(local_hadamard_test, n_qubits = 2, error =  1.6 * 10**-3, n_shots=1
 
 # %%
 
-dispatch_id = ct.dispatch(workflow)(local_hadamard_test)
+dispatch_id = ct.dispatch(workflow)()
 res = ct.get_result(dispatch_id=dispatch_id, wait=True)
 print(res)
 
