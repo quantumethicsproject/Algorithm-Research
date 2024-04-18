@@ -53,12 +53,15 @@ for trial in range(5):
     # w = q_delta * np.random.randn(batch_size, problem.param_shape, requires_grad=True)
 
     # %%
-    # create our devices to run our circuits on
+# create our devices to run our circuits on
     dev_mu = qml.device("default.mixed", wires=n_qubits+1)
+    dev_x = qml.device("default.mixed", wires=n_qubits, shots=n_shots)
+
+
     # dev_mu = qml.device("default.qubit", wires=n_qubits+1)
-    dev_gamma = qml.device("default.qubit", wires=n_qubits*2 + 1)
     if NOISE_MODEL == "FakeManila":
         dev_mu = qml.device("qiskit.remote", wires=n_qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
+        dev_x = qml.device("qiskit.remote", wires=n_qubits, backend=configured_backend())
 
     # %%
     # in order to make the error mitigation work, we have to pull out the QNode definition outside of the cost function so I'm doing it here

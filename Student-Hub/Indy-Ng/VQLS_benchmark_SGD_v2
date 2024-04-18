@@ -1,0 +1,548 @@
+# %%
+import pennylane as qml
+from pennylane import numpy as np
+import covalent as ct
+
+import matplotlib.pyplot as plt
+from qiskit.providers.fake_provider import *
+
+import time
+
+from typing import (List, Tuple)
+
+import functools as ft
+
+import pennylane as qml
+from pennylane import numpy as np
+from pennylane import Identity, PauliX, PauliY, PauliZ
+
+from abc import ABC, abstractmethod
+
+# %%
+# HYPERPARAMETERS
+NOISE_MODEL = None
+eta = 1
+q_delta = 0.001
+n_qubits = 5
+n_shots = 10**4
+SAMPLE_EVERY = 5
+NUM_TRIALS = 1
+
+# %%
+def configured_backend():
+    # backend = provider.get_backend("ibm_osaka") # uncomment this line to use a real IBM device
+    backend = FakeManila()
+    # backend.options.update_options(...)
+    return backend
+
+# create our devices to run our circuits on
+dev_mu = qml.device("default.mixed", wires=n_qubits+1)
+dev_x = qml.device("default.mixed", wires=n_qubits, shots=n_shots)
+
+
+# dev_mu = qml.device("default.qubit", wires=n_qubits+1)
+if NOISE_MODEL == "FakeManila":
+    dev_mu = qml.device("qiskit.remote", wires=n_qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
+    dev_x = qml.device("qiskit.remote", wires=n_qubits, backend=configured_backend())
+
+# %%
+pauli_dict = {"I": Identity.compute_matrix(), "X": PauliX.compute_matrix(), "Y": PauliY.compute_matrix(), "Z": PauliZ.compute_matrix()}
+
+def A_to_num (n_qubits: int, coefs: np.tensor, terms: List[str]):
+    """
+    Given an array of coeffs c and an array of A_l formatted as a list of strings, return A
+    @params
+    coefs (eg. [1, 0.2, 0.2])
+    terms (eg. ["III", "XZI", "XII"])
+
+    returns an np.array
+    """    
+    if len(coefs) != len(terms):
+        raise ValueError("Number of coefficients does not match number of terms.")
+    
+    if n_qubits <= 0:
+        raise ValueError("Number of qubits is not a number greater than 0.")
+    
+    terms_len = len(terms)
+    for i in range(terms_len):
+        if len(terms[i]) != n_qubits:
+            raise ValueError("Number of terms in each Pauli gate combination must be the same as number of qubits.")
+        
+
+    dim = 2**n_qubits
+    mat = np.zeros((dim, dim), dtype=np.complex64)
+
+    for (c, pauli) in zip(coefs, terms):
+        pauli = [pauli_dict[key] for key in pauli]
+        if pauli == ["I"]:
+            mat += c * ft.reduce(np.kron, pauli)
+        else:
+            mat += c * ft.reduce(np.kron, pauli)
+        
+    return mat
+
+
+def generate_weights(n_qubits:int, layers:int, q_delta:float):
+    if n_qubits <= 0:
+        raise ValueError("Number of qubits is not a number greater than 0.")
+    
+    if layers < 0:
+        raise ValueError("Number of layers is not a number greater than or equal to 0.")
+
+    shapes = qml.SimplifiedTwoDesign.shape(n_layers=layers, n_wires=n_qubits)
+
+    total_weights = [q_delta * np.random.random(size=shape) for shape in shapes]
+    
+    init_weights = total_weights[0]
+    weights = total_weights[1]
+    w = np.append(init_weights, np.concatenate(np.concatenate(weights)))
+
+    return init_weights, weights, w
+
+
+def reshape_weights(n_qubits:int, n_parameters:int, layers:int, w):
+    shapes = qml.SimplifiedTwoDesign.shape(n_layers=layers, n_wires=n_qubits)
+
+    init_weights = w[0:n_qubits]
+    weights = np.reshape(w[n_qubits:n_parameters], shapes[1])
+
+
+    return init_weights, weights
+
+def b_to_num(problem):
+    dev = qml.device("default.qubit", wires=problem.get_n_qubits())
+
+    def wrapper():
+        problem.U_b()
+        return qml.state()
+    
+    wrapper = qml.QNode(wrapper, dev)
+
+    return wrapper()
+
+
+# This function technically works BUT needs to be tested + optimized further
+
+def A_to_code (idx, ancilla_idx, terms: List[str], offset=0):
+
+    if idx < 0:
+        raise ValueError("Index of linear combination must be >= 0.")
+    
+    target_pauli = list(terms[idx])
+    
+    order_idx = offset
+
+    for i in range(len(target_pauli)):
+        if target_pauli[i] == 'I':
+            order_idx += 1
+            None
+        if target_pauli[i] == 'X':
+            qml.CNOT(wires = (ancilla_idx, order_idx))
+            order_idx += 1
+        if target_pauli[i] == 'Y':
+            qml.CY(wires = (ancilla_idx, order_idx))
+            order_idx += 1
+        if target_pauli[i] == 'Z':
+            qml.CZ(wires = (ancilla_idx, order_idx))
+            order_idx += 1
+
+class Problem(ABC):
+    def __init__(self, n_qubits, c, A_terms) -> None:
+        super().__init__()
+        self.n_qubits = n_qubits
+        self.A_num = A_to_num(n_qubits, c, A_terms)
+        self.A_terms = A_terms
+
+        # normalize c
+        self.c = np.array(c) / np.linalg.norm(self.A_num, ord=2)
+
+        # Total number of qubits; here we add an ancillary qubit
+        self.tot_qubits = self.n_qubits + 1
+        # Index of ancillary qubit (Python lists are 0-indexed)
+        self.ancilla_idx = self.n_qubits
+
+    @abstractmethod
+    def get_coeffs():
+        """gets c, A_l"""
+        pass
+    
+    @abstractmethod
+    def get_n_qubits():
+        """gets number of qubits of your problem"""
+        pass
+
+    @abstractmethod
+    def U_b():
+        """Unitary matrix rotating the ground state to the problem vector |b> = U_b |0>."""
+        pass
+
+    @abstractmethod
+    def CA(idx):
+        """controlled application of A_l"""
+        pass
+
+    @abstractmethod
+    def variational_block(weights):
+        """function that defines the ansatz"""
+        pass
+
+    @abstractmethod
+    def get_A_and_b():
+        """returns classical A and b"""
+        pass
+
+class ToyProblem(Problem):
+    def __init__(self, n_qubits):
+        c = [1, 0.25]
+        A_terms = ["I"*n_qubits, "X"*n_qubits]
+        print(A_terms)
+        self.n_layers = 2
+        self._param_shape = 5 * self.n_layers * n_qubits
+        super().__init__(n_qubits, c, A_terms)
+
+    # getters
+    def get_coeffs(self):
+        return self.c, self.A_terms
+    
+    def get_n_qubits(self):
+        return self.n_qubits
+    
+    @property
+    def param_shape(self):
+        return self._param_shape
+
+    # circuit components
+    def U_b(self):
+        [qml.Hadamard(wires=i) for i in range(self.n_qubits)]
+
+    def CA(self, ancilla_idx, idx):
+        A_to_code(idx, ancilla_idx=self.ancilla_idx, terms=self.A_terms)
+
+    def variational_block(self, weights, offset=0):
+        # could be put in the state but idk
+        layers = 2
+        n_parameters = self.n_qubits + layers*(2*self.n_qubits - 2)
+
+        init_weights, weights = reshape_weights(self.n_qubits, n_parameters, layers, weights)
+
+        qml.templates.SimplifiedTwoDesign(
+            initial_layer_weights=init_weights,
+            weights=weights,
+            wires=range(offset, self.n_qubits + offset),
+        )
+
+    # what do I actually want to achieve with this func
+    def get_A_and_b(self):
+        b = b_to_num(self)
+
+        return self.A_num, b
+
+# %%
+@qml.qnode(dev_mu, interface="autograd")
+def local_hadamard_test(weights, problem, l=None, lp=None, j=None, part=None):
+    """this function implements the local hadamard test for calculating mu and the norm"""
+
+    ancilla_idx = problem.get_n_qubits()
+
+    # First Hadamard gate applied to the ancillary qubit.
+    qml.Hadamard(wires=ancilla_idx)
+
+    # For estimating the imaginary part of the coefficient "mu", we must add a "-i"
+    # phase gate.
+    if part == "Im" or part == "im":
+        qml.PhaseShift(-np.pi / 2, wires=ancilla_idx)
+
+    # Variational circuit generating a guess for the solution vector |x>
+    problem.variational_block(weights)
+
+    # Controlled application of the unitary component A_l of the problem matrix A.
+    problem.CA(ancilla_idx, l)
+
+    # Adjoint of the unitary U_b associated to the problem vector |b>.
+    # In this specific example Adjoint(U_b) = U_b.
+    problem.U_b()
+
+    # Controlled Z operator at position j. If j = -1, apply the identity.
+    if j != -1:
+        qml.CZ(wires=[ancilla_idx, j])
+
+    # Unitary U_b associated to the problem vector |b>.
+    problem.U_b()
+
+    # Controlled application of Adjoint(A_lp).
+    # In this specific example Adjoint(A_lp) = A_lp.
+    problem.CA(ancilla_idx, lp)
+
+    # Second Hadamard gate applied to the ancillary qubit.
+    qml.Hadamard(wires=ancilla_idx)
+
+    if NOISE_MODEL == "Bitflip=0.05":
+        [qml.BitFlip(0.05, wires=i) for i in range(ancilla_idx)]
+
+    # Expectation value of Z for the ancillary qubit.
+    return qml.expval(qml.PauliZ(wires=ancilla_idx))
+
+# Computes the mu coefficients
+
+def mu(weights, problem, l=None, lp=None, j=None):
+    """Generates the coefficients to compute the "local" cost function C_L."""
+
+    # start = time.time()
+    mu_real = local_hadamard_test(weights, problem, l=l, lp=lp, j=j, part="Re")
+    mu_imag = local_hadamard_test(weights, problem, l=l, lp=lp, j=j, part="Im")
+    # print(f"mu: {time.time() - start:.2f}")
+
+    return mu_real + 1.0j * mu_imag
+
+
+def psi_norm(weights, c, problem):
+    """Returns the normalization constant <psi|psi>, where |psi> = A |x>."""
+    norm = 0.0
+
+    for l in range(0, len(c)):
+        for lp in range(0, len(c)):
+            # start = time.time()
+            norm = norm + c[l] * np.conj(c[lp]) * mu(weights, problem, l, lp, -1)
+            # print(f"norm accum ({l*len(c) + lp})")
+
+    return abs(norm)
+
+
+def cost_loc(problem, weights):
+    """Local version of the cost function. Tends to zero when A|x> is proportional to |b>."""
+
+    c, _ = problem.get_coeffs()
+    n_qubits = problem.get_n_qubits()
+    
+    # start = time.time()
+    mu_sum = 0.0
+
+    for l in range(0, len(c)):
+        for lp in range(0, len(c)):
+            for j in range(0, n_qubits):
+                # start2 = time.time()
+                mu_sum = mu_sum + c[l] * np.conj(c[lp]) * mu(weights, problem, l, lp, j)
+                # print(f"mu sum accum ({l*len(c)*len(c) + lp*len(c) + j})")
+
+    mu_sum = abs(mu_sum)
+    # print(f"mu sum: \t{time.time() - start:.2f}s")
+
+    # Cost function C_L
+    # start = time.time()
+    res = 0.5 - 0.5 * mu_sum / (n_qubits * psi_norm(weights, c, problem))
+    # print(f"normalize:\t{time.time() - start:.2f}")
+    return res
+
+# %%
+# define the problem we want to perform our experiment on
+
+@qml.qnode(dev_x)
+def prepare_and_sample(problem, weights):
+
+    # Variational circuit generating a guess for the solution vector |x>
+    problem.variational_block(weights)
+
+    # We assume that the system is measured in the computational basis.
+    # then sampling the device will give us a value of 0 or 1 for each qubit (n_qubits)
+    # this will be repeated for the total number of shots provided (n_shots)
+    if NOISE_MODEL == "Bitflip=0.05":
+        [qml.BitFlip(0.05, wires=i) for i in range(problem.get_n_qubits())]
+    return qml.sample()
+
+
+def get_cprobs(problem):
+    """Returns x as a classical vector"""
+
+    A_num, b = problem.get_A_and_b()
+    A_inv = np.linalg.inv(A_num)
+    x = np.dot(A_inv, b)
+
+    c_probs = (x / np.linalg.norm(x)) ** 2
+
+    return c_probs
+
+
+def get_qprobs(problem, w):
+    # sampler = qml.QNode(prepare_and_sample, device)
+    # sampler = mitigate_node(sampler)
+
+    raw_samples = prepare_and_sample(problem, w)
+    # raw_samples = sampler(problem, w)
+    # print(f"raw samples: {raw_samples}")
+    # raw_samples = np.concatenate(raw_samples, axis=0)# FOR BATCHING
+
+    # convert the raw samples (bit strings) into integers and count them
+    samples = []
+    for sam in raw_samples:
+        samples.append(int("".join(str(int(bs)) for bs in sam), base=2))
+
+    q_probs = np.bincount(samples, minlength=2**problem.n_qubits) / len(raw_samples)
+    # q_probs = np.bincount(samples, minlength=2**problem.n_qubits) / n_shots
+
+    return q_probs
+
+
+def hellinger(p,q):
+    """Hellinger distance between distributions"""
+    return np.sqrt(np.sum(np.sqrt(p) - np.sqrt(q))**2)/np.sqrt(2)
+
+
+def calc_err(n_qubits: int, cost: float, cond_number: float) -> float:
+    """helper function that turns a cost value into an error bound"""
+    return np.sqrt(abs(n_qubits * cost * (cond_number ** 2)))
+
+# %%
+from IPython.display import clear_output
+
+
+def train_func(n_qubits, w, error, problem, cond_num, c_probs):
+    opt = qml.GradientDescentOptimizer(eta)
+    # opt = qml.AdagradOptimizer(eta)
+    # opt = qml.AdamOptimizer(eta) # TODO: tune decay terms
+
+    cost_history = []
+
+    err = float("inf")
+    it = 1
+
+    # training loop
+    best_err = 1000
+    best_w = w
+    prev_err = 0
+
+    ERR_1000 = None
+    TTS_1000 = None
+    EAD_history = []
+    EAD = 999
+
+    start = time.time()
+    while EAD > error:
+    # for it in range(5): 
+        w, cost = opt.step_and_cost(lambda w: cost_loc(problem, w), w)
+
+        err = calc_err(n_qubits, cost, cond_num)
+        if err < best_err:
+            best_err = err
+            best_w = w
+        
+        clear_output(wait=True)
+
+        # print(np.array_equal(best_w, w))
+
+        print("Step {:3d}       Cost_L = {:9.7f} \t error = {:9.7f}".format(it, cost, err), flush=True)
+        cost_history.append(cost.item())
+
+        if it % SAMPLE_EVERY == 1:
+            q_probs = get_qprobs(problem, best_w)
+            EAD = hellinger(c_probs, q_probs)
+            EAD_history.append(np.real(EAD.item()))
+
+        if  abs(prev_err - err) < 10**-9:
+            break
+        if time.time() - start > 20000:
+            break
+
+        prev_err = err
+
+        # if it == 1000:
+        #     ERR_1000 = err
+        #     TTS_1000 = time.time() - start
+
+        it += 1
+
+    TTS = time.time() - start
+    print(f"Training time: {TTS}s")
+
+    return best_w, cost_history, EAD_history, TTS
+
+# %%
+def workflow(n_qubits = 2, error =  1.6 * 10**-3, n_shots=10**4):
+    cond_num = 2
+    problem = ToyProblem(n_qubits=n_qubits)
+    # problem = IsingProblem(n_qubits=n_qubits, J=0.1, cond_num=cond_num)
+
+    # initialize weights
+    w = q_delta * np.random.randn(problem.param_shape, requires_grad=True)
+    init_weights = list(w.copy().numpy())
+    # w = q_delta * np.random.randn(batch_size, problem.param_shape, requires_grad=True)
+
+    c_probs = get_cprobs(problem)
+
+
+    # in order to make the error mitigation work, we have to pull out the QNode definition outside of the cost function so I'm doing it here
+    # local_hadamard_test = ct.qelectron(local_hadamard_test, executor=[INSERT SOME REAL BACKEND HERE])
+    # local_hadamard_test = mitigate_node(local_hadamard_test)
+
+    # best_w, cost_history, EAD_history, TTS = train_func(w)
+    best_w, cost_history, EAD_history, TTS = train_func(n_qubits, w, error, problem, cond_num, c_probs)
+
+    plt.style.use("seaborn")
+    plt.plot(cost_history, "g")
+    plt.ylabel("Cost function")
+    plt.xlabel("Optimization steps")
+    plt.savefig(f"images/cost_plots/Toy_SGD_lr=1_{NOISE_MODEL}_{n_qubits}q_{trial}.png")
+    plt.close()
+
+    q_probs = get_qprobs(problem, best_w)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7, 4))
+
+    ax1.bar(np.arange(0, 2 ** n_qubits), c_probs, color="blue")
+    ax1.set_xlim(-0.5, 2 ** n_qubits - 0.5)
+    ax1.set_xlabel("Vector space basis")
+    ax1.set_title("Classical probabilities")
+
+    ax2.bar(np.arange(0, 2 ** n_qubits), q_probs, color="green")
+    ax2.set_xlim(-0.5, 2 ** n_qubits - 0.5)
+    ax2.set_xlabel("Hilbert space basis")
+    ax2.set_title("Quantum probabilities")
+    plt.savefig(f"images/inf_plots/Toy_SGD_lr=1_{NOISE_MODEL}_{n_qubits}q_{trial}.png")
+    plt.close(fig)
+
+    return {
+        "cost_history": cost_history,
+        "EAD_history": EAD_history,
+        "TTS": TTS,
+        "init_weights": init_weights,
+        "model_weights": best_w,
+    }
+
+# %%
+for trial in range(NUM_TRIALS):
+    res = workflow(n_qubits=n_qubits)
+    cost_history = res["cost_history"]
+    EAD_history = res["EAD_history"]
+    TTS = res["TTS"]
+    init_weights = res["init_weights"]
+    model_weights = res["model_weights"]
+
+
+    # %%
+    result = {
+        "problem": "ToyProblem",
+        "trial": trial,
+        "n_qubits": n_qubits,
+        "ansatz": f"2-layer HEA",
+        "cost": "local",
+        "optimizer": "SGD_lr=1",
+        "error_threshold": 1.6 * 10**-3,
+        "noise_model": NOISE_MODEL,
+        "TTS": TTS,
+        "STS": len(cost_history),
+        "final_EAD": EAD_history[-1],
+        "EAD_history": list(EAD_history),
+        "cost_history": list(cost_history),
+        "model_weights": list(model_weights.numpy()),
+        "init_weights": init_weights
+    }
+
+    # %%
+    # # serialize to JSON?
+    import json
+
+    with open(f'data/Toy_SGD_lr=1_{NOISE_MODEL}_v2.json', 'a') as fp:
+        fp.write(",")
+        json.dump(result, fp)
+
+
+
+
