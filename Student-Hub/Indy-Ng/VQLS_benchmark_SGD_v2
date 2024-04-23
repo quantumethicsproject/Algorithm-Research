@@ -20,13 +20,13 @@ from abc import ABC, abstractmethod
 
 # %%
 # HYPERPARAMETERS
-NOISE_MODEL = None
+NOISE_MODEL = "Bitflip=0.05"
 eta = 1
 q_delta = 0.001
-n_qubits = 5
+n_qubits = 4
 n_shots = 10**4
-SAMPLE_EVERY = 5
-NUM_TRIALS = 1
+SAMPLE_EVERY = 10
+NUM_TRIALS = 5
 
 # %%
 def configured_backend():
