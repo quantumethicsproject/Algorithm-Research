@@ -15,6 +15,8 @@ import os.path
 
 import matplotlib.pyplot as plt
 from pennylane_cirq import ops as cirq_ops
+from qiskit.providers.fake_provider import *
+
 
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
 plt.rc('text', usetex=True)
@@ -31,9 +33,9 @@ ssteps=20
 p=0.05
 
 ###want to automate eventually:
-qubits=5
-HNAME='4XX5'
-NMODEL="bitflipcirq=0.05"#"depolcirq=0.05"
+qubits=2
+HNAME='XX2'
+NMODEL="FakeManila" #"bitflippenny=0.05"#"depolcirq=0.05"
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
 
 ###JEFF'S NOISE MODEL CODE###
@@ -67,7 +69,7 @@ sarray=np.linspace(0, 1, ssteps)
 # bdl_array=available_data[1:2]
 
 bdl_array=np.linspace(-1, 1, numpoints)
-
+#bdl_array=np.array([1])
 
 def MOL_H_BUILD(mol, bdl):
     part = qml.data.load("qchem", molname=mol, basis="STO-3G", bondlength=bdl, attributes=["molecule", "hamiltonian", "fci_energy"])[0]
@@ -188,6 +190,8 @@ def kandala_cost_fcn_noise(param, H=Hdef):
             [cirq_ops.Depolarize(p, wires=bit) for bit in range(qubits)]
     elif NMODEL=="bitflippenny=0.05":
         [qml.BitFlip(p, wires=i) for i in range(qubits)]
+    elif NMOEDL=="FakeManila":
+        return qml.expval(H)
     else:
         print('warning, noise model not recognized')
     return qml.expval(H)
@@ -215,6 +219,8 @@ def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef):
         #     cirq_ops.BitFlip(p, wires=bit)
     elif NMODEL=="bitflippenny=0.05":
         [qml.BitFlip(p, wires=i) for i in range(qubits)]
+    elif NMOEDL=="FakeManila":
+        return qml.expval(H)
     else:
         print('warning, noise model not recognized')
 

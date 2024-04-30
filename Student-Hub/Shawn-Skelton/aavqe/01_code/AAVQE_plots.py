@@ -220,6 +220,6 @@ def AVG_BEST_Z(qubitrange=np.array([3, 5]), barray=bdl_array,ctol=c_tol, NMODEL=
     
     return AVG
 
-#CONTOUR_PLOT_AVG_BEST(qubitrange=np.array([3, 5]), NMODEL="bitflippenny=0.05")
+CONTOUR_PLOT_AVG_BEST(qubitrange=np.array([3, 5, 7, 8]), NMODEL="bitflippenny=0.05")
 #CHECK_CONSIST()
 GET_PLOT2(8, ifsave=True)
