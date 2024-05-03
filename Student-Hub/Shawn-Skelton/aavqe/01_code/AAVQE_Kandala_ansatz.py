@@ -15,6 +15,8 @@ import os.path
 
 import matplotlib.pyplot as plt
 from pennylane_cirq import ops as cirq_ops
+from qiskit.providers.fake_provider import *
+
 
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
 plt.rc('text', usetex=True)
@@ -31,9 +33,9 @@ ssteps=20
 p=0.05
 
 ###want to automate eventually:
-qubits=7
-HNAME='XX7'
-NMODEL="depolcirq=0.05"
+qubits=2
+HNAME='XX2'
+NMODEL="FakeManila" #"bitflippenny=0.05"#"depolcirq=0.05"
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
 
 ###JEFF'S NOISE MODEL CODE###
@@ -44,27 +46,19 @@ def configured_backend():
     return backend
 
 # create our devices to run our circuits on
+dev=qml.device('default.qubit', wires=qubits)
 noise_strength = p
-dev_mu = qml.device("default.mixed", wires=qubits)
-if NMODEL == "Bitflip=0.05":
-    dev_mu = qml.transforms.insert(
-        dev_mu,
-        qml.BitFlip,
-        noise_strength
-    )
+dev_N = qml.device("default.mixed", wires=qubits)
 
 if NMODEL == "FakeManila":
-    dev_mu = qml.device("qiskit.remote", wires=qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
+    dev_N = qml.device("qiskit.remote", wires=qubits, backend=configured_backend()) # device for real IBM devices noisy simulators
+if "cirq" in NMODEL:
+    dev_N=qml.device("cirq.mixedsimulator", wires=qubits)
+
 ###the shape we want is tensor([...], requires_grad=true)
 params0all=np.random.rand(3*d*qubits+2*qubits) #np.array([theta0]*(3*d*qubits+2*qubits))
 
-electrons=2
-dev=qml.device('default.qubit', wires=qubits)
-devcirq = qml.device("cirq.mixedsimulator", wires=qubits)
-
-
 GS=[]
-
 kits=[]
 Nkenergy=[]
 Nkits=[]
@@ -75,7 +69,7 @@ sarray=np.linspace(0, 1, ssteps)
 # bdl_array=available_data[1:2]
 
 bdl_array=np.linspace(-1, 1, numpoints)
-
+#bdl_array=np.array([1])
 
 def MOL_H_BUILD(mol, bdl):
     part = qml.data.load("qchem", molname=mol, basis="STO-3G", bondlength=bdl, attributes=["molecule", "hamiltonian", "fci_energy"])[0]
@@ -186,13 +180,20 @@ def kandala_cost_fcn(param, H=Hdef):
     kandala_circuit(param, range(qubits), d)
     return qml.expval(H)
 
-@qml.qnode(devcirq, interface="autograd")
+@qml.qnode(dev_N, interface="autograd")
 def kandala_cost_fcn_noise(param, H=Hdef):
     kandala_circuit(param, range(qubits), d)
-
-    for bit in range(qubits):
-        cirq_ops.Depolarize(p, wires=bit)
-        # cirq_ops.BitFlip(p, wires=bit)
+    if "cirq" in NMODEL:
+        if NMODEL=="bitflipcirq=0.05":
+            [cirq_ops.BitFlip(p, wires=bit) for bit in range(qubits)]
+        elif NMODEL=="depolcirq=0.05":
+            [cirq_ops.Depolarize(p, wires=bit) for bit in range(qubits)]
+    elif NMODEL=="bitflippenny=0.05":
+        [qml.BitFlip(p, wires=i) for i in range(qubits)]
+    elif NMOEDL=="FakeManila":
+        return qml.expval(H)
+    else:
+        print('warning, noise model not recognized')
     return qml.expval(H)
 
 @qml.qnode(dev, interface="autograd")
@@ -205,14 +206,25 @@ def cost_fnAA(param, H=Hdef, H0=H0def, s=sdef):
     kandala_circuit(param, range(qubits), d)
     return qml.expval((1-s)*H0+s*H)    
 
-@qml.qnode(devcirq, interface="autograd")
+@qml.qnode(dev_N, interface="autograd")
 def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef): 
     kandala_circuit(param, range(qubits), d)
-    for bit in range(qubits):
-        cirq_ops.Depolarize(p, wires=bit)
-        # cirq_ops.BitFlip(p, wires=bit)
-    H2=(1-s)*H0+s*H
-    return qml.expval(H2)
+    if "cirq" in NMODEL:
+        if NMODEL=="bitflipcirq=0.05":
+            [cirq_ops.BitFlip(p, wires=bit) for bit in range(qubits)]
+        elif NMODEL=="depolcirq=0.05":
+            [cirq_ops.Depolarize(p, wires=bit) for bit in range(qubits)]
+        # for bit in range(qubits):
+        #     #cirq_ops.Depolarize(p, wires=bit)
+        #     cirq_ops.BitFlip(p, wires=bit)
+    elif NMODEL=="bitflippenny=0.05":
+        [qml.BitFlip(p, wires=i) for i in range(qubits)]
+    elif NMOEDL=="FakeManila":
+        return qml.expval(H)
+    else:
+        print('warning, noise model not recognized')
+
+    return qml.expval((1-s)*H0+s*H)
     
 
 def BP_DETECT(g,n, bpsteps=False, Fn=1/(9**4)):
@@ -330,7 +342,7 @@ def RUN_AA_VQE(sarray, initparams,d, Hit, H0it, cost_fc=cost_fnAA):
         return SDATA, sEplotlist
 
 ##main loop
-data={'GSE': GS,'ssteps':ssteps, 'noisetype':NMODEL, 'noiseparam':p ,'interatom_d': bdl_array, 'init_kparam': params0all,  'ansatz_depth': d, 'solver':'GD_0.04' , 'max_iterations': mit, 'conv_tol': ctol}
+data={'ssteps':ssteps, 'noisetype':NMODEL, 'noiseparam':p ,'interatom_d': bdl_array, 'init_kparam': params0all,  'ansatz_depth': d, 'solver':'GD_0.04' , 'max_iterations': mit, 'conv_tol': ctol}
 
 for b, bdl in enumerate(bdl_array):
     print('bond length', bdl)
@@ -347,7 +359,7 @@ for b, bdl in enumerate(bdl_array):
     Nkits.append(NKDATA['its'])
     Nkenergy.append(NKDATA['gsEest'])
     Nkallenergy=NKDATA['energies']
-    print('noisy done', Nkits[-1])
+    #print('noisy done', Nkits[-1])
     
     ###make a figure with some subplots
     fig, (ax1, ax2, ax3) = plt.subplots(3)
@@ -366,7 +378,8 @@ for b, bdl in enumerate(bdl_array):
     SDATA, sEplotlist=RUN_AA_VQE(sarray, params0all, d, Hit, H0it, )
     NSDATA, NsEplotlist=RUN_AA_VQE(sarray, params, d, Hit, H0it,  cost_fc=cost_fnAA_noise )
     print('noisy AAVQE done')
-    
+    #NSDATA=[]
+    #NKDATA=[]
     ax1.plot(np.linspace(0, NSDATA['fulln'], NSDATA['fulln']), np.array(NsEplotlist), c='blue', marker=3,label='Noisy AAVQE' )
     filename='AAVQE_HEA_'+HNAME+'_lambda='+str(np.around(bdl, 2))+NMODEL+'.png'
 
