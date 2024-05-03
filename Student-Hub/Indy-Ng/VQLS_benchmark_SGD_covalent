@@ -17,14 +17,21 @@ from pennylane import numpy as np
 from pennylane import Identity, PauliX, PauliY, PauliZ
 
 from abc import ABC, abstractmethod
+import os
+
+import dotenv
+dotenv.load_dotenv()
+IBQM_token = os.getenv('IBMQ_token')
 
 # %%
 # HYPERPARAMETERS
-NOISE_MODEL = None
+NOISE_MODEL = "IBM"
 eta = 1
 q_delta = 0.001
 n_qubits = 2
 n_shots = 10**4
+SAMPLE_EVERY = 10
+NUM_TRIALS = 1
 
 # %%
 def configured_backend():
@@ -42,6 +49,15 @@ dev_x = qml.device("default.mixed", wires=n_qubits, shots=n_shots)
 if NOISE_MODEL == "FakeManila":
     dev_mu = qml.device("qiskit.remote", wires=n_qubits+1, backend=configured_backend()) # device for real IBM devices noisy simulators
     dev_x = qml.device("qiskit.remote", wires=n_qubits, backend=configured_backend())
+
+if NOISE_MODEL == "IBM":
+    # Define a Qiskit Runtime executor.
+    qiskit_executor = ct.executor.QiskitExecutor(
+        device="sampler",
+        backend="ibmq_qasm_simulator",
+        ibmqx_token=IBQM_token,  # required if not in config file
+        single_job=False,
+    )
 
 # %%
 pauli_dict = {"I": Identity.compute_matrix(), "X": PauliX.compute_matrix(), "Y": PauliY.compute_matrix(), "Z": PauliZ.compute_matrix()}
@@ -236,6 +252,7 @@ class ToyProblem(Problem):
         return self.A_num, b
 
 # %%
+@ct.qelectron(executors=qiskit_executor)
 @qml.qnode(dev_mu, interface="autograd")
 def local_hadamard_test(weights, problem, l=None, lp=None, j=None, part=None):
     """this function implements the local hadamard test for calculating mu and the norm"""
@@ -318,22 +335,24 @@ def cost_loc(problem, weights):
     for l in range(0, len(c)):
         for lp in range(0, len(c)):
             for j in range(0, n_qubits):
-                # start2 = time.time()
+                start2 = time.time()
                 mu_sum = mu_sum + c[l] * np.conj(c[lp]) * mu(weights, problem, l, lp, j)
+                print(f"mu time: {start2 - time.time()}")
                 # print(f"mu sum accum ({l*len(c)*len(c) + lp*len(c) + j})")
 
     mu_sum = abs(mu_sum)
     # print(f"mu sum: \t{time.time() - start:.2f}s")
 
     # Cost function C_L
-    # start = time.time()
+    start = time.time()
     res = 0.5 - 0.5 * mu_sum / (n_qubits * psi_norm(weights, c, problem))
-    # print(f"normalize:\t{time.time() - start:.2f}")
+    print(f"normalize:\t{time.time() - start:.2f}")
     return res
 
 # %%
 # define the problem we want to perform our experiment on
 
+@ct.qelectron(executors=qiskit_executor)
 @qml.qnode(dev_x)
 def prepare_and_sample(problem, weights):
 
@@ -414,39 +433,36 @@ def train_func(n_qubits, w, error, problem, cond_num, c_probs):
     EAD = 999
 
     start = time.time()
-    while EAD > error:
-    # for it in range(5): 
-        w, cost = opt.step_and_cost(lambda w: cost_loc(problem, w), w)
+    cost_loc(problem, w)
+    # while EAD > error:
+    # # for it in range(5): 
+    #     w, cost = opt.step_and_cost(lambda w: cost_loc(problem, w), w)
 
-        err = calc_err(n_qubits, cost, cond_num)
-        if err < best_err:
-            best_err = err
-            best_w = w
+    #     err = calc_err(n_qubits, cost, cond_num)
+    #     if err < best_err:
+    #         best_err = err
+    #         best_w = w
         
-        clear_output(wait=True)
+    #     clear_output(wait=True)
 
-        # print(np.array_equal(best_w, w))
+    #     # print(np.array_equal(best_w, w))
 
-        print("Step {:3d}       Cost_L = {:9.7f} \t error = {:9.7f}".format(it, cost, err), flush=True)
-        cost_history.append(cost.item())
+    #     print("Step {:3d}       Cost_L = {:9.7f} \t error = {:9.7f}".format(it, cost, err), flush=True)
+    #     cost_history.append(cost.item())
 
-        if it % 3 == 1:
-            q_probs = get_qprobs(problem, best_w)
-            EAD = hellinger(c_probs, q_probs)
-            EAD_history.append(np.real(EAD.item()))
+    #     if it % SAMPLE_EVERY == 1:
+    #         q_probs = get_qprobs(problem, best_w)
+    #         EAD = hellinger(c_probs, q_probs)
+    #         EAD_history.append(np.real(EAD.item()))
 
-        if  abs(prev_err - err) < 10**-9:
-            break
-        if time.time() - start > 20000:
-            break
+    #     if  abs(prev_err - err) < 10**-9:
+    #         break
+    #     if time.time() - start > 20000:
+    #         break
 
-        prev_err = err
+    #     prev_err = err
 
-        # if it == 1000:
-        #     ERR_1000 = err
-        #     TTS_1000 = time.time() - start
-
-        it += 1
+    #     it += 1
 
     TTS = time.time() - start
     print(f"Training time: {TTS}s")
@@ -454,7 +470,7 @@ def train_func(n_qubits, w, error, problem, cond_num, c_probs):
     return best_w, cost_history, EAD_history, TTS
 
 # %%
-@ct.lattice(executor="local")
+@ct.lattice
 def workflow(n_qubits = 2, error =  1.6 * 10**-3, n_shots=10**4):
     cond_num = 2
     problem = ToyProblem(n_qubits=n_qubits)
@@ -467,28 +483,43 @@ def workflow(n_qubits = 2, error =  1.6 * 10**-3, n_shots=10**4):
 
     c_probs = get_cprobs(problem)
 
-
-    # in order to make the error mitigation work, we have to pull out the QNode definition outside of the cost function so I'm doing it here
-    # local_hadamard_test = ct.qelectron(local_hadamard_test, executor=[INSERT SOME REAL BACKEND HERE])
-    # local_hadamard_test = mitigate_node(local_hadamard_test)
-
-    # best_w, cost_history, EAD_history, TTS = train_func(w)
     best_w, cost_history, EAD_history, TTS = train_func(n_qubits, w, error, problem, cond_num, c_probs)
+
+    # plt.style.use("seaborn")
+    # plt.plot(cost_history, "g")
+    # plt.ylabel("Cost function")
+    # plt.xlabel("Optimization steps")
+    # plt.savefig(f"images/cost_plots/Toy_SGD_lr=1_{NOISE_MODEL}_{n_qubits}q_{trial}.png")
+    # plt.close()
+
+    # q_probs = get_qprobs(problem, best_w)
+    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7, 4))
+
+    # ax1.bar(np.arange(0, 2 ** n_qubits), c_probs, color="blue")
+    # ax1.set_xlim(-0.5, 2 ** n_qubits - 0.5)
+    # ax1.set_xlabel("Vector space basis")
+    # ax1.set_title("Classical probabilities")
+
+    # ax2.bar(np.arange(0, 2 ** n_qubits), q_probs, color="green")
+    # ax2.set_xlim(-0.5, 2 ** n_qubits - 0.5)
+    # ax2.set_xlabel("Hilbert space basis")
+    # ax2.set_title("Quantum probabilities")
+    # plt.savefig(f"images/inf_plots/Toy_SGD_lr=1_{NOISE_MODEL}_{n_qubits}q_{trial}.png")
+    # plt.close(fig)
 
     return {
         "cost_history": cost_history,
         "EAD_history": EAD_history,
         "TTS": TTS,
-        "init_weights": 0,
         "init_weights": init_weights,
         "model_weights": best_w,
     }
 
 # %%
-
-dispatch_id = ct.dispatch(workflow)()
-res = ct.get_result(dispatch_id=dispatch_id, wait=True)
-print(res)
+for trial in range(NUM_TRIALS):
+    dispatch_id = ct.dispatch(workflow)()
+    res = ct.get_result(dispatch_id=dispatch_id, wait=True)
+    print(res)
 
 #%%
 res.result

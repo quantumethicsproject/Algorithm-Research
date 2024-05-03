@@ -11,7 +11,7 @@ sv1 = ct.executor.BraketQubitExecutor(
 
 # Execute the following circuit:
 # |0> - H - Measure
-@ct.qelectron(executors=sv1)
+@ct.electron
 def simple_quantum_task(num_qubits: int):
     import pennylane as qml
 
@@ -27,6 +27,7 @@ def simple_quantum_task(num_qubits: int):
         wires=num_qubits,
     )
 
+    @ct.qelectron(executor=sv1)
     @qml.qnode(device=device)
     def simple_circuit():
         qml.Hadamard(wires=[0])
