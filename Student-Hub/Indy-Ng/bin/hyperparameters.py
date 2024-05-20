@@ -10,7 +10,7 @@ steps = 30
 eta = 1
 
 # Initial spread of random quantum weights
-q_delta = 0.001
+q_delta = 3
 
 # Seed for RNG
 rng_seed = 0

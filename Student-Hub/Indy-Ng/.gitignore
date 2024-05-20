@@ -1,5 +1,6 @@
 VQLSvenv
 .venv
 __pycache__
+.data/*
 venv-3.9
 venv-3.11
