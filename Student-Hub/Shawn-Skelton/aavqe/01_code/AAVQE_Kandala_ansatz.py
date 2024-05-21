@@ -190,7 +190,7 @@ def kandala_cost_fcn_noise(param, H=Hdef):
             [cirq_ops.Depolarize(p, wires=bit) for bit in range(qubits)]
     elif NMODEL=="bitflippenny=0.05":
         [qml.BitFlip(p, wires=i) for i in range(qubits)]
-    elif NMOEDL=="FakeManila":
+    elif NMODEL=="FakeManila":
         return qml.expval(H)
     else:
         print('warning, noise model not recognized')
@@ -219,7 +219,7 @@ def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef):
         #     cirq_ops.BitFlip(p, wires=bit)
     elif NMODEL=="bitflippenny=0.05":
         [qml.BitFlip(p, wires=i) for i in range(qubits)]
-    elif NMOEDL=="FakeManila":
+    elif NMODEL=="FakeManila":
         return qml.expval(H)
     else:
         print('warning, noise model not recognized')
