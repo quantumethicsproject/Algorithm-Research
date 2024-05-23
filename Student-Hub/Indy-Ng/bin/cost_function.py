@@ -1,5 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as np
+from .hyperparameters import *
 
 import time
 
@@ -39,6 +40,9 @@ def local_hadamard_test(weights, problem, l=None, lp=None, j=None, part=None):
 
     # Second Hadamard gate applied to the ancillary qubit.
     qml.Hadamard(wires=ancilla_idx)
+
+    if NOISE_MODEL == "Bitflip=0.05":
+        [qml.BitFlip(0.05, wires=i) for i in range(ancilla_idx)]
 
     # Expectation value of Z for the ancillary qubit.
     return qml.expval(qml.PauliZ(wires=ancilla_idx))

@@ -14,8 +14,9 @@ import pickle
 import os.path
 
 import matplotlib.pyplot as plt
-from pennylane_cirq import ops as cirq_ops
-from qiskit.providers.fake_provider import *
+# from pennylane_cirq import ops as cirq_ops
+
+from tqdm import tqdm
 
 
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
@@ -37,6 +38,11 @@ qubits=2
 HNAME='XX2'
 NMODEL="FakeManila" #"bitflippenny=0.05"#"depolcirq=0.05"
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
+
+### FILE PATHS
+script_path = os.path.abspath(__file__)
+# save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
+save_path = "aavqe/03_data"
 
 ###JEFF'S NOISE MODEL CODE###
 def configured_backend():
@@ -183,12 +189,12 @@ def kandala_cost_fcn(param, H=Hdef):
 @qml.qnode(dev_N, interface="autograd")
 def kandala_cost_fcn_noise(param, H=Hdef):
     kandala_circuit(param, range(qubits), d)
-    if "cirq" in NMODEL:
-        if NMODEL=="bitflipcirq=0.05":
-            [cirq_ops.BitFlip(p, wires=bit) for bit in range(qubits)]
-        elif NMODEL=="depolcirq=0.05":
-            [cirq_ops.Depolarize(p, wires=bit) for bit in range(qubits)]
-    elif NMODEL=="bitflippenny=0.05":
+    # if "cirq" in NMODEL:
+        # if NMODEL=="bitflipcirq=0.05":
+        #     [cirq_ops.BitFlip(p, wires=bit) for bit in range(qubits)]
+        # elif NMODEL=="depolcirq=0.05":
+        #     [cirq_ops.Depolarize(p, wires=bit) for bit in range(qubits)]
+    if NMODEL=="bitflippenny=0.05":
         [qml.BitFlip(p, wires=i) for i in range(qubits)]
     elif NMODEL=="FakeManila":
         return qml.expval(H)
@@ -209,17 +215,17 @@ def cost_fnAA(param, H=Hdef, H0=H0def, s=sdef):
 @qml.qnode(dev_N, interface="autograd")
 def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef): 
     kandala_circuit(param, range(qubits), d)
-    if "cirq" in NMODEL:
-        if NMODEL=="bitflipcirq=0.05":
-            [cirq_ops.BitFlip(p, wires=bit) for bit in range(qubits)]
-        elif NMODEL=="depolcirq=0.05":
-            [cirq_ops.Depolarize(p, wires=bit) for bit in range(qubits)]
-        # for bit in range(qubits):
-        #     #cirq_ops.Depolarize(p, wires=bit)
-        #     cirq_ops.BitFlip(p, wires=bit)
-    elif NMODEL=="bitflippenny=0.05":
-        [qml.BitFlip(p, wires=i) for i in range(qubits)]
-    elif NMODEL=="FakeManila":
+    # if "cirq" in NMODEL:
+    #     if NMODEL=="bitflipcirq=0.05":
+    #         [cirq_ops.BitFlip(p, wires=bit) for bit in range(qubits)]
+    #     elif NMODEL=="depolcirq=0.05":
+    #         [cirq_ops.Depolarize(p, wires=bit) for bit in range(qubits)]
+    #     # for bit in range(qubits):
+    #     #     #cirq_ops.Depolarize(p, wires=bit)
+    #     #     cirq_ops.BitFlip(p, wires=bit)
+    # elif NMODEL=="bitflippenny=0.05":
+    #     [qml.BitFlip(p, wires=i) for i in range(qubits)]
+    if NMODEL=="FakeManila":
         return qml.expval(H)
     else:
         print('warning, noise model not recognized')
@@ -257,7 +263,7 @@ def kandala_VQE(param0, d, Hvqe=Hdef, cost_fc=kandala_cost_fcn, systsz=qubits, m
     t0r=time.perf_counter()
     bpsteps=False
 
-    for n in range(max_iterations):
+    for n in tqdm(range(max_iterations)):
         ##actually runs each optimization step and returns new parameters
         thetas, prev_energy= opt.step_and_cost(cost_fc, thetas, H=Hvqe)
         energy.append(kandala_cost_fcn(thetas,Hvqe))
@@ -324,7 +330,7 @@ def RUN_AA_VQE(sarray, initparams,d, Hit, H0it, cost_fc=cost_fnAA):
         sn=[]
         st=[]
 
-        for sind, sit in enumerate(sarray):
+        for sind, sit in tqdm(enumerate(sarray)):
             svarg="sit_is_"+str(sit)
             SinstDATA=AA_VQE(params, d, Hvqe=Hit, H0vqe=H0it, svqe=sit, gradDetect=False )
             SDATA['svarg']=SinstDATA
@@ -387,10 +393,8 @@ for b, bdl in enumerate(bdl_array):
     ax3.plot(np.linspace(0, NSDATA['fulln'], NSDATA['fulln']), np.array(NsEplotlist), c='blue', marker=2, label='Noisy AAVQE')
     
     ax3.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
-
-    script_path = os.path.abspath(__file__)
-    save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
     completename = os.path.join(save_path, filename) 
+
     if ifsave==True:
         plt.savefig(completename)
     bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
@@ -401,9 +405,6 @@ plt.legend()
 
 if ifsave==True:
     filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_'+str(numpoints)+'_iads.pkl'
-    script_path = os.path.abspath(__file__)
-    save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
     completename = os.path.join(save_path, filename) 
-    
     with open(completename,'wb') as file:
         pickle.dump(data, file)
