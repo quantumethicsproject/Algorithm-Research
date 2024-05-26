@@ -34,8 +34,8 @@ ssteps=20
 p=0.05
 
 ###want to automate eventually:
-qubits=2
-HNAME='XX2'
+qubits=3
+HNAME='XX3'
 NMODEL="FakeManila" #"bitflippenny=0.05"#"depolcirq=0.05"
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
 
