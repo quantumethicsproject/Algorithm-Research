@@ -4,7 +4,6 @@ Created on Fri Aug  4 21:05:48 2023
 
 @author: skelt
 """
-from qiskit.providers.fake_provider import *
 import pennylane as qml
 from pennylane import numpy as np
 #from pennylane import qchem
@@ -13,10 +12,17 @@ import time
 import pickle
 import os.path
 
+#from qiskit.providers.fake_provider import *
 import matplotlib.pyplot as plt
 from pennylane_cirq import ops as cirq_ops
-from qiskit.providers.fake_provider import *
 
+import itertools
+
+# from qiskit import QuantumCircuit, transpile
+# from qiskit_aer import AerSimulator
+# from qiskit.visualization import plot_histogram
+# from qiskit_aer.noise import NoiseModel
+#from qiskit.providers.fake_provider.backends.manila import FakeManila
 
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
 plt.rc('text', usetex=True)
@@ -33,15 +39,16 @@ ssteps=20
 p=0.05
 
 ###want to automate eventually:
-qubits=2
-HNAME='XX2'
-NMODEL="FakeManila" #"bitflippenny=0.05"#"depolcirq=0.05"
+qubits=3
+HNAME='XX3'#'2EC7'
+NMODEL="bitflippenny=0.05"#"depolcirq=0.05"
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
 
 ###JEFF'S NOISE MODEL CODE###
 def configured_backend():
     # backend = provider.get_backend("ibm_osaka") # uncomment this line to use a real IBM device
-    backend = FakeManila()
+    backend = FakeManila
+    
     # backend.options.update_options(...)
     return backend
 
@@ -69,7 +76,7 @@ sarray=np.linspace(0, 1, ssteps)
 # bdl_array=available_data[1:2]
 
 bdl_array=np.linspace(-1, 1, numpoints)
-#bdl_array=np.array([1])
+#bdl_array=np.array([qubits])
 
 def MOL_H_BUILD(mol, bdl):
     part = qml.data.load("qchem", molname=mol, basis="STO-3G", bondlength=bdl, attributes=["molecule", "hamiltonian", "fci_energy"])[0]
@@ -114,6 +121,45 @@ def XX_HAM(sites, lamb):
     eigs=np.linalg.eigvals(qml.matrix(H))
     gse=min(np.real(eigs))
     return H, H0, gse
+
+def SUBSET_GENERATOR(sites):
+    if sites==4:
+        combinations_object=[[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]
+    elif sites==5:
+        combinations_object=[[0, 1, 2], [0, 1, 3],[0, 1, 4], [0, 2, 3],[0, 2, 4], [0, 3, 4], [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4]]
+    elif sites==6:
+        combinations_object=[[0, 1, 2], [0, 1, 3],[0, 1, 4], [0, 1, 5], [0, 2, 3],[0, 2, 4],[0, 2, 5], [0, 3, 4],[0, 3, 5],[0, 4, 5], [1, 2, 3], [1, 2, 4],[1, 2, 5], [1, 3, 4],[1, 3, 5], [1, 4, 5],[2, 3, 4], [2, 3, 5], [2, 4, 5], [3, 4, 5]]
+        print(len(combinations_object))
+    elif sites==7:
+        combinations_object=[[0, 1, 2], [0, 1, 3],[0, 1, 4], [0, 1, 5],[0, 1, 6], [0, 2, 3],[0, 2, 4],[0, 2, 5],[0, 2, 6], [0, 3, 4],[0, 3, 5], [0, 3, 6], [0, 4, 5], [0, 4, 6], [0, 5, 6], [1, 2, 3], [1, 2, 4],[1, 2, 5], [1, 2, 6],[1, 3, 4],[1, 3, 5],[1, 3, 6], [1, 4, 5],[1, 4, 6],[2, 3, 4], [2, 3, 5], [2, 3, 6],[2, 4, 5], [2, 5, 6], [3, 4, 5], [3, 4, 6],[3, 5, 6], [4, 5, 6]]
+        
+    return combinations_object
+
+
+def EXACT_COVER_HAM(sites):
+    subsets=SUBSET_GENERATOR(sites)#[[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]
+    
+    coeffs=[1, -0.5, -0.5, -0.5, 0.5, 0.5, 0.5]
+    fullcoeffs=[]
+    fullGset=[]
+
+    for s, subset in enumerate(subsets):
+        Gset=[qml.Identity(wires=subset[0])@qml.Identity(wires=subset[1])@qml.Identity(wires=subset[2])] + [qml.PauliZ(i) for i in subset] + [qml.PauliZ(subset[0])@qml.PauliZ(subset[1]), qml.PauliZ(subset[0])@qml.PauliZ(subset[2]), qml.PauliZ(subset[1])@qml.PauliZ(subset[2]) ]
+        #Gset=[qml.Identity(wires=subset)] + [qml.PauliZ(i) for i in subset]+ [qml.PauliZ(subset[0])@qml.PauliZ(subset[1]), qml.PauliZ(subset[0])@qml.PauliZ(subset[2]), qml.PauliZ(subset[1])@qml.PauliZ(subset[2]) ]
+        
+        fullcoeffs=fullcoeffs+coeffs
+        fullGset=fullGset+Gset
+        
+    
+    H0=qml.Hamiltonian(np.ones(sites)/(sites), [qml.PauliX(i) for i in range(0, sites)])
+    H=qml.Hamiltonian(fullcoeffs, fullGset)
+    
+    
+    eigs=np.linalg.eigvals(qml.matrix(H))
+    gse=min(np.real(eigs))
+    
+    return H, H0, gse
+
 
 Hdef,H0def, gsEdef=XX_HAM(qubits, bdl_array[0])
 sdef=1
@@ -190,7 +236,7 @@ def kandala_cost_fcn_noise(param, H=Hdef):
             [cirq_ops.Depolarize(p, wires=bit) for bit in range(qubits)]
     elif NMODEL=="bitflippenny=0.05":
         [qml.BitFlip(p, wires=i) for i in range(qubits)]
-    elif NMOEDL=="FakeManila":
+    elif NMODEL=="FakeManila":
         return qml.expval(H)
     else:
         print('warning, noise model not recognized')
@@ -219,7 +265,7 @@ def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef):
         #     cirq_ops.BitFlip(p, wires=bit)
     elif NMODEL=="bitflippenny=0.05":
         [qml.BitFlip(p, wires=i) for i in range(qubits)]
-    elif NMOEDL=="FakeManila":
+    elif NMODEL=="FakeManila":
         return qml.expval(H)
     else:
         print('warning, noise model not recognized')
@@ -347,8 +393,8 @@ data={'ssteps':ssteps, 'noisetype':NMODEL, 'noiseparam':p ,'interatom_d': bdl_ar
 for b, bdl in enumerate(bdl_array):
     print('bond length', bdl)
     Hit, H0it, gsE=XX_HAM(qubits, bdl)
+    #Hit, H0it,gsE=EXACT_COVER_HAM(bdl)
     GS.append(gsE)
-
     bdictname='b_'+str(np.around(bdl))+'_data'
     params=params0all
     KDATA=kandala_VQE(params, d, Hvqe=Hit, gradDetect=True, max_iterations=mit*ssteps)
@@ -359,7 +405,7 @@ for b, bdl in enumerate(bdl_array):
     Nkits.append(NKDATA['its'])
     Nkenergy.append(NKDATA['gsEest'])
     Nkallenergy=NKDATA['energies']
-    #print('noisy done', Nkits[-1])
+    print('noisy done', Nkits[-1])
     
     ###make a figure with some subplots
     fig, (ax1, ax2, ax3) = plt.subplots(3)
@@ -390,11 +436,16 @@ for b, bdl in enumerate(bdl_array):
 
     script_path = os.path.abspath(__file__)
     save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
-    completename = os.path.join(save_path, filename) 
-    if ifsave==True:
-        plt.savefig(completename)
+    completefigname = os.path.join(save_path, filename) 
     bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
     data[bdictname]=bdict
+    if ifsave==True:
+        plt.savefig(completefigname)
+        filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_lambda_'+str(np.around(bdl, 2))+'.pkl'
+        completename=os.path.join(save_path, filename) 
+        with open(completename,'wb') as file:
+            pickle.dump(bdict, file)
+    
 
 plt.legend()
 ###save stuff
