@@ -12,7 +12,7 @@ import time
 import pickle
 import os.path
 
-#from qiskit.providers.fake_provider import *
+from qiskit.providers.fake_provider import *
 import matplotlib.pyplot as plt
 # from pennylane_cirq import ops as cirq_ops
 
@@ -41,9 +41,9 @@ ssteps=20
 p=0.05
 
 ###want to automate eventually:
-qubits=6
-HNAME="0EC6" #'XX3'
-NMODEL="bitflippenny=0.05"#"depolcirq=0.05"
+qubits=3
+HNAME='1XX3'
+NMODEL="FakeManila" #"bitflippenny=0.05"#"depolcirq=0.05"
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
 
 ### FILE PATHS
@@ -54,7 +54,7 @@ save_path = "aavqe/03_data"
 ###JEFF'S NOISE MODEL CODE###
 def configured_backend():
     # backend = provider.get_backend("ibm_osaka") # uncomment this line to use a real IBM device
-    backend = FakeManila
+    backend = FakeManila()
     
     # backend.options.update_options(...)
     return backend
@@ -441,8 +441,8 @@ for b, bdl in enumerate(bdl_array):
     
     ax3.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
 
-    script_path = os.path.abspath(__file__)
-    save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
+    # script_path = os.path.abspath(__file__)
+    # save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
     completefigname = os.path.join(save_path, filename) 
 #    bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
     bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA,  'Nkdata': NKDATA}
