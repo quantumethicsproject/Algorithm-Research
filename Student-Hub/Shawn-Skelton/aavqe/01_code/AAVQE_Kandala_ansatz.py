@@ -41,9 +41,9 @@ ssteps=20
 p=0.05
 
 ###want to automate eventually:
-qubits=3
-HNAME='XX3'
-NMODEL="FakeManila" #"bitflippenny=0.05"#"depolcirq=0.05"
+qubits=6
+HNAME="0EC6" #'XX3'
+NMODEL="bitflippenny=0.05"#"depolcirq=0.05"
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
 
 ### FILE PATHS
@@ -82,8 +82,8 @@ sarray=np.linspace(0, 1, ssteps)
 # available_data = qml.data.list_datasets()["qchem"][mol]["STO-3G"]
 # bdl_array=available_data[1:2]
 
-bdl_array=np.linspace(-1, 1, numpoints)
-#bdl_array=np.array([qubits])
+# bdl_array=np.linspace(-1, 1, numpoints)
+bdl_array=np.array([qubits])
 
 def MOL_H_BUILD(mol, bdl):
     part = qml.data.load("qchem", molname=mol, basis="STO-3G", bondlength=bdl, attributes=["molecule", "hamiltonian", "fci_energy"])[0]
@@ -399,13 +399,13 @@ data={'ssteps':ssteps, 'noisetype':NMODEL, 'noiseparam':p ,'interatom_d': bdl_ar
 
 for b, bdl in enumerate(bdl_array):
     print('bond length', bdl)
-    Hit, H0it, gsE=XX_HAM(qubits, bdl)
-    #Hit, H0it,gsE=EXACT_COVER_HAM(bdl)
+    #Hit, H0it, gsE=XX_HAM(qubits, bdl)
+    Hit, H0it,gsE=EXACT_COVER_HAM(bdl)
     GS.append(gsE)
     bdictname='b_'+str(np.around(bdl))+'_data'
     params=params0all
-    KDATA=kandala_VQE(params, d, Hvqe=Hit, gradDetect=True, max_iterations=mit*ssteps)
-    kallenergy=KDATA['energies']
+    #KDATA=kandala_VQE(params, d, Hvqe=Hit, gradDetect=True, max_iterations=mit*ssteps)
+    #kallenergy=KDATA['energies']
 
     params=params0all
     NKDATA=kandala_VQE(params, d, Hvqe=Hit, cost_fc=kandala_cost_fcn_noise, max_iterations=mit*ssteps)
@@ -421,7 +421,7 @@ for b, bdl in enumerate(bdl_array):
     ax1.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
 
     ax2.plot(np.linspace(0, Nkits[-1], Nkits[-1]+1), Nkallenergy, c='r', marker=1, label='Noisy HEA VQE')
-    ax2.plot(np.linspace(0, KDATA['its'], KDATA['its']+1), kallenergy, c='blue', marker=1, label='HEA VQE')
+    #ax2.plot(np.linspace(0, KDATA['its'], KDATA['its']+1), kallenergy, c='blue', marker=1, label='HEA VQE')
     ax2.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
 
     ax1.set_title('VQE E vs iteration')
@@ -444,7 +444,9 @@ for b, bdl in enumerate(bdl_array):
     script_path = os.path.abspath(__file__)
     save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
     completefigname = os.path.join(save_path, filename) 
-    bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
+#    bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
+    bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA,  'Nkdata': NKDATA}
+
     data[bdictname]=bdict
     if ifsave==True:
         plt.savefig(completefigname)
