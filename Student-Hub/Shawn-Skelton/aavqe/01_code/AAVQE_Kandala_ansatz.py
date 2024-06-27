@@ -12,7 +12,8 @@ import time
 import pickle
 import os.path
 
-from qiskit.providers.fake_provider import *
+#from qiskit.providers.fake_provider.backends.manila import FakeManila
+#from qiskit.providers.fake_provider import fake_qasm_backend
 import matplotlib.pyplot as plt
 # from pennylane_cirq import ops as cirq_ops
 
@@ -25,6 +26,8 @@ import itertools
 # from qiskit.visualization import plot_histogram
 # from qiskit_aer.noise import NoiseModel
 #from qiskit.providers.fake_provider.backends.manila import FakeManila
+#from qiskit.providers.fake_provider import *
+#from qiskit.providers.fake_provider.backends.manila import FakeManila
 
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
 plt.rc('text', usetex=True)
@@ -32,6 +35,7 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 
 ####constants
 ifsave=True
+device='sess'
 #mol='H2'
 numpoints=6
 d=1
@@ -42,19 +46,22 @@ p=0.05
 
 ###want to automate eventually:
 qubits=3
-HNAME='1XX3'
-NMODEL="FakeManila" #"bitflippenny=0.05"#"depolcirq=0.05"
+HNAME='XX3'
+NMODEL='bitflippenny=0.05'#"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
 ###stuff for the variance: want an randomized order of magnitude bound for the variance
 
 ### FILE PATHS
 script_path = os.path.abspath(__file__)
 # save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
-save_path = "aavqe/03_data"
+if device=='sess':
+    save_path = "aavqe\\03_data"
+else:
+    save_path="aavqe/03_data"
 
 ###JEFF'S NOISE MODEL CODE###
 def configured_backend():
     # backend = provider.get_backend("ibm_osaka") # uncomment this line to use a real IBM device
-    backend = FakeManila()
+    backend = stupid.FakeManila()
     
     # backend.options.update_options(...)
     return backend
@@ -82,8 +89,8 @@ sarray=np.linspace(0, 1, ssteps)
 # available_data = qml.data.list_datasets()["qchem"][mol]["STO-3G"]
 # bdl_array=available_data[1:2]
 
-# bdl_array=np.linspace(-1, 1, numpoints)
-bdl_array=np.array([qubits])
+bdl_array=np.linspace(-1, 1, numpoints)
+#bdl_array=np.array([qubits])
 
 def MOL_H_BUILD(mol, bdl):
     part = qml.data.load("qchem", molname=mol, basis="STO-3G", bondlength=bdl, attributes=["molecule", "hamiltonian", "fci_energy"])[0]
@@ -130,7 +137,9 @@ def XX_HAM(sites, lamb):
     return H, H0, gse
 
 def SUBSET_GENERATOR(sites):
-    if sites==4:
+    if sites==3:
+        combinations_object=[[0, 1, 2]]
+    elif sites==4:
         combinations_object=[[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]
     elif sites==5:
         combinations_object=[[0, 1, 2], [0, 1, 3],[0, 1, 4], [0, 2, 3],[0, 2, 4], [0, 3, 4], [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4]]
@@ -378,9 +387,10 @@ def RUN_AA_VQE(sarray, initparams,d, Hit, H0it, cost_fc=cost_fnAA):
         st=[]
 
         for sind, sit in tqdm(enumerate(sarray)):
-            svarg="sit_is_"+str(sit)
+            print(sarray)
+            #svarg=
             SinstDATA=AA_VQE(params, d, Hvqe=Hit, H0vqe=H0it, svqe=sit, gradDetect=False )
-            SDATA['svarg']=SinstDATA
+            SDATA["sit_is_"+str(sit)]=SinstDATA
             params=SinstDATA['angles']
             senergy.append(SinstDATA['energy'])
             sn.append(SinstDATA['its'])
@@ -399,8 +409,8 @@ data={'ssteps':ssteps, 'noisetype':NMODEL, 'noiseparam':p ,'interatom_d': bdl_ar
 
 for b, bdl in enumerate(bdl_array):
     print('bond length', bdl)
-    #Hit, H0it, gsE=XX_HAM(qubits, bdl)
-    Hit, H0it,gsE=EXACT_COVER_HAM(bdl)
+    Hit, H0it, gsE=XX_HAM(qubits, bdl)
+    #Hit, H0it,gsE=EXACT_COVER_HAM(bdl)
     GS.append(gsE)
     bdictname='b_'+str(np.around(bdl))+'_data'
     params=params0all
@@ -434,23 +444,24 @@ for b, bdl in enumerate(bdl_array):
     #NSDATA=[]
     #NKDATA=[]
     ax1.plot(np.linspace(0, NSDATA['fulln'], NSDATA['fulln']), np.array(NsEplotlist), c='blue', marker=3,label='Noisy AAVQE' )
-    filename='AAVQE_HEA_'+HNAME+'_lambda='+str(np.around(bdl, 2))+NMODEL+'.png'
-
+    #filename='AAVQE_HEA_'+HNAME+'_lambda='+str(np.around(bdl, 2))+NMODEL+'.png'
+    filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_'+str(numpoints)+'_iads'+'.png'
     ax3.plot(np.linspace(0, SDATA['fulln'], SDATA['fulln']), np.array(sEplotlist), c='r', marker=1, label='AAVQE')
     ax3.plot(np.linspace(0, NSDATA['fulln'], NSDATA['fulln']), np.array(NsEplotlist), c='blue', marker=2, label='Noisy AAVQE')
     
     ax3.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=0.5,zorder=0, label="Analytic GSE")
 
-    # script_path = os.path.abspath(__file__)
-    # save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
+    script_path = os.path.abspath(__file__)
+    save_path=script_path.replace("01_code\AAVQE_Kandala_ansatz.py", "03_data")
     completefigname = os.path.join(save_path, filename) 
 #    bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
     bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA,  'Nkdata': NKDATA}
-
+    
     data[bdictname]=bdict
     if ifsave==True:
         plt.savefig(completefigname)
-        filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_lambda_'+str(np.around(bdl, 2))+'.pkl'
+        #filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_'+str(numpoints)+'_iads.pkl'
+        #filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_lambda_'+str(np.around(bdl, 2))+'.pkl'
         completename=os.path.join(save_path, filename) 
         with open(completename,'wb') as file:
             pickle.dump(bdict, file)
