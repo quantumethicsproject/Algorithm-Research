@@ -12,6 +12,7 @@ import os.path
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import itertools
+from qiskit.providers.fake_provider import *
 
 import problems.useful_fcns as ufs
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
@@ -21,10 +22,10 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 ####CONSTANTS WHICH THE USER SETS FOR EACH RUN
 ifsave=True
 run_vqe=False
-qubits=10
-HNAME='0XX10'
-NMODEL='bitflippenny=0.05'#"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
-device='sess'
+qubits=2
+HNAME='0XX0'
+NMODEL="FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
+device='notsess'
 numpoints=8
 bdl_array=np.linspace(-1, 1, numpoints)
 #bdl_array=np.array([qubits])
@@ -54,7 +55,7 @@ else:
 ###JEFF'S NOISE MODEL CODE###
 def configured_backend():
     # backend = provider.get_backend("ibm_osaka") # uncomment this line to use a real IBM device
-    backend = stupid.FakeManila()
+    backend = FakeManila()
     # backend.options.update_options(...)
     return backend
 
