@@ -12,7 +12,6 @@ import os.path
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import itertools
-from qiskit.providers.fake_provider import *
 
 import problems.useful_fcns as ufs
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
@@ -22,10 +21,11 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 ####CONSTANTS WHICH THE USER SETS FOR EACH RUN
 ifsave=True
 run_vqe=False
-qubits=2
-HNAME='0XX0'
-NMODEL="FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
-device='notsess'
+qubits=3
+HNAME='5XX3'
+###to run 6xx8
+NMODEL='bitflippenny=0.05' #"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
+device='notsess' #'sess'
 numpoints=8
 bdl_array=np.linspace(-1, 1, numpoints)
 #bdl_array=np.array([qubits])
@@ -50,12 +50,13 @@ if device=='sess':
     save_path=script_path.replace("01_code\\AAVQE_HEA_SIM.py", "03_data")
 else:
     script_path = os.path.abspath(__file__)
-    save_path="aavqe/03_data"
-
+    #save_path="aavqe/03_data"
+    save_path=script_path.replace("01_code/AAVQE_HEA_SIM.py", "03_data")
+                                 
 ###JEFF'S NOISE MODEL CODE###
 def configured_backend():
     # backend = provider.get_backend("ibm_osaka") # uncomment this line to use a real IBM device
-    backend = FakeManila()
+    backend = stupid.FakeManila()
     # backend.options.update_options(...)
     return backend
 
@@ -186,7 +187,9 @@ def cost_fnAA(param, H=Hdef, H0=H0def, s=sdef):
     H: the hamiltonian required
     """ 
     HEA_circuit(param, range(qubits), d)
-    return qml.expval((1-s)*H0+s*H)    
+    #print('type of s', type(float(s)))
+    return qml.expval(qml.simplify(float(1-s)*H0+float(s)*H))    
+    #return qml.expval(0.3*H0)
 
 @qml.qnode(dev_N, interface="autograd")
 def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef): 
@@ -205,8 +208,9 @@ def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef):
         return qml.expval((1-s)*H0+s*H)
     else:
         print('warning, noise model not recognized')
-
-    return qml.expval((1-s)*H0+s*H)
+    
+    #return qml.expval(H0)
+    return qml.expval(float(1-s)*H0+float(s)*H)
 
 ####VQE SOLVERS
 def kandala_VQE(param0, d, Hvqe=Hdef, cost_fc=HEA_cost_fcn, systsz=qubits, max_iterations=mit, conv_tol=ctol):
