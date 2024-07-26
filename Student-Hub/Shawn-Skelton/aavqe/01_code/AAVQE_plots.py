@@ -11,11 +11,15 @@ qubitrange=np.array([3, 4, 5, 6, 7, 8])
 models=["bitflippenny=0.05", 'nonoise', "FakeManila"]
 bdl_array=np.linspace(-1, 1, numpoints) #should remove
 c_tol=1.6*10**(-3)
+dev='mac'
 
 def DATA_EXTRACT(NMODEL="bitflipcirq=0.05",HNAME='XX3', numpoints=6):
     filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_'+str(numpoints)+'_iads.pkl'
     script_path = os.path.abspath(__file__)
-    save_path=script_path.replace("01_code\AAVQE_plots.py", "03_data")
+    if dev=='mac':
+        save_path=script_path.replace("01_code/AAVQE_plots.py", "03_data")
+    else:
+        save_path=script_path.replace("01_code\AAVQE_plots.py", "03_data")
     completename = os.path.join(save_path, filename) 
     
     with open(completename,'rb') as file:
@@ -307,7 +311,7 @@ def GET_pt_AVG(qubit, bdl,ctol=c_tol, NMODEL="bitflipcirq=0.05",numpoints=6):
 
     return Nkavgn, Nkstd, NAAavgn, NAAstd, ksuccesses, AAsuccesses 
 
-def GET_qubit_AVG(qubit, barray,ctol=c_tol, NMODEL="bitflippenny=0.05",numpoints=6, Hreflist=['0XX', '1XX', '2XX', '3XX', '4XX']):
+def GET_qubit_AVG(qubit, barray,Hreflist, ctol=c_tol, NMODEL="bitflippenny=0.05",numpoints=6):
     kiters=np.zeros([len(Hreflist)+len(bdl_array)])
     ksuccesses=np.zeros([ len(Hreflist)+len(bdl_array)])
     AAiters=np.zeros([len(Hreflist)+len(bdl_array)])
@@ -356,7 +360,7 @@ def PLOT_AVG_SUCC(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflipcirq=0
     ax.set_title('Qubit number vs ratio of success')
     plt.show()
 
-def PLOT_AVG_ITERS_W_STD(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=0.05", numpoints=6):
+def PLOT_AVG_ITERS_W_STD(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=0.05", numpoints=6, Hreflist=['0XX', '1XX', '2XX', '3XX', '4XX']):
     fig=plt.figure()
     Nkavgnlist=np.zeros(len(qubitrange))
     Nkstdlist=np.zeros(len(qubitrange))
@@ -369,7 +373,7 @@ def PLOT_AVG_ITERS_W_STD(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitfli
     bar_colors = ['tab:red', 'tab:blue']
     for q, qubit in enumerate(qubitrange):
         
-        Nkavgnlist[q], Nkstd, NAAavgn, NAAstd, ksuccesses, AAsuccesses =GET_qubit_AVG(qubit, barray, numpoints=numpoints)
+        Nkavgnlist[q], Nkstd, NAAavgn, NAAstd, ksuccesses, AAsuccesses =GET_qubit_AVG(qubit, barray, Hreflist, numpoints=numpoints)
         
         Nkstdlist[q]=Nkstd
         NAAavgnlist[q]=NAAavgn
@@ -397,6 +401,7 @@ def PLOT_AVG_ITERS_W_STD(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitfli
     plt.ylabel('average number of iterations to convergence')
     plt.xlabel('number of qubits')
     plt.legend()
+    plt.show()
     #SAVE_PLOT('aavqe_avg_iters.pdf')
 
 def PLOT_AVG_SUCC(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=0.05", numpoints=6):
@@ -438,7 +443,7 @@ def PLOT_AVG_SUCC(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=
 #GET_PLOT1(np.array([8, 10]), NMODELS=["bitflippenny=0.05", 'nonoise'],barray=bdl_array,  numpoints=8, HPREF='9XX', ifsave=False,  bar_labels = ['red', 'blue'], bar_colors = ['tab:red', 'tab:blue'])
 #GET_PLOT2(8, NMODEL="bitflippenny=0.05",  numpoints=8, HPREF='9XX')
 
-PLOT_AVG_ITERS_W_STD(np.array([3, 4, 5, 6, 7, 8]), numpoints=8)
+PLOT_AVG_ITERS_W_STD(np.array([3, 4, 6]), numpoints=8)
 #PLOT_AVG_SUCC(np.array([3, 4, 5, 6, 7, 8]), numpoints=8)
 #CONTOUR_PLOT_AVG_BEST(qubitrange=np.array([3, 4, 5, 6, 7, 8]),NMODEL="bitflippenny=0.05",numpoints=8)
 plt.show()

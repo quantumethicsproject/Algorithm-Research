@@ -9,6 +9,7 @@ from pennylane import numpy as np
 import time
 import pickle
 import os.path
+import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import itertools
@@ -21,9 +22,10 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 ####CONSTANTS WHICH THE USER SETS FOR EACH RUN
 ifsave=True
 run_vqe=False
-qubits=3
-HNAME='5XX3'
-###to run 6xx8
+qubits=7
+HNAME='5XX7'
+print('hamiltonian is', HNAME)
+
 NMODEL='bitflippenny=0.05' #"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
 device='notsess' #'sess'
 numpoints=8
@@ -369,3 +371,4 @@ if ifsave==True:
     completename = os.path.join(save_path, filename) 
     with open(completename,'wb') as file:
         pickle.dump(data, file)
+os.system('afplay /System/Library/Sounds/Sosumi.aiff')
