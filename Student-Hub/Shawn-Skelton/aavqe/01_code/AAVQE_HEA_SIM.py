@@ -22,8 +22,8 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 ####CONSTANTS WHICH THE USER SETS FOR EACH RUN
 ifsave=True
 run_vqe=False
-qubits=7
-HNAME='5XX7'
+qubits=8
+HNAME='6XX8'
 print('hamiltonian is', HNAME)
 
 NMODEL='bitflippenny=0.05' #"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
