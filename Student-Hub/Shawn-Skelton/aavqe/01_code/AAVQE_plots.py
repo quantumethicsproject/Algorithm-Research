@@ -1,8 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
+
+'''DEFINE THE FIGURE AND DOMAIN'''
+import matplotlib as mpl
+mpl.rcParams.update(mpl.rcParamsDefault)
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
-plt.rc('text', usetex=True)
-plt.rc('text.latex', preamble=r'\usepackage{braket}')
+#plt.rc('text', usetex=True)
+#plt.rc('text.latex', preamble=r'\usepackage{braket}')
 import pickle
 import os.path
 
@@ -17,10 +21,10 @@ def DATA_EXTRACT(NMODEL="bitflipcirq=0.05",HNAME='XX3', numpoints=6):
     filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_'+str(numpoints)+'_iads.pkl'
     script_path = os.path.abspath(__file__)
     if dev=='mac':
-        save_path=script_path.replace("01_code/AAVQE_plots.py", "03_data")
+        save_path=script_path.replace("01_code/aavqe_plots.py", "03_data")
     else:
         save_path=script_path.replace("01_code\AAVQE_plots.py", "03_data")
-    completename = os.path.join(save_path, filename) 
+    completename = os.path.join(save_path, filename)
     
     with open(completename,'rb') as file:
         DATA=pickle.load(file)
@@ -145,7 +149,10 @@ def GET_PLOT2(guessqubit, barray=bdl_array, NMODEL="bitflipcirq=0.05",  numpoint
 
 def SAVE_PLOT(filename):
     script_path = os.path.abspath(__file__)
-    save_path=script_path.replace("01_code\AAVQE_plots.py", "02_figures")
+    if dev=='mac':
+        save_path=script_path.replace("01_code/aavqe_plots.py", "02_figures")
+    else:
+        save_path=script_path.replace("01_code\AAVQE_plots.py", "02_figures")
     completename = os.path.join(save_path, filename) 
     plt.savefig(completename)
     print(completename)
@@ -360,7 +367,7 @@ def PLOT_AVG_SUCC(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflipcirq=0
     ax.set_title('Qubit number vs ratio of success')
     plt.show()
 
-def PLOT_AVG_ITERS_W_STD(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=0.05", numpoints=6, Hreflist=['0XX', '1XX', '2XX', '3XX', '4XX']):
+def PLOT_AVG_ITERS_W_STD(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=0.05", numpoints=6, Hreflist=['0XX', '1XX', '2XX', '3XX', '4XX', '5XX', '7XX', '8XX', '9XX']):
     fig=plt.figure()
     Nkavgnlist=np.zeros(len(qubitrange))
     Nkstdlist=np.zeros(len(qubitrange))
@@ -440,12 +447,10 @@ def PLOT_AVG_SUCC(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=
 
 #PLOT_AVG_SUCC(qubitrange=np.array([3, 4, 5, 6, 7,8]), NMODEL="bitflippenny=0.05", numpoints=8)
 
-#GET_PLOT1(np.array([8, 10]), NMODELS=["bitflippenny=0.05", 'nonoise'],barray=bdl_array,  numpoints=8, HPREF='9XX', ifsave=False,  bar_labels = ['red', 'blue'], bar_colors = ['tab:red', 'tab:blue'])
+GET_PLOT1(np.array([7, 10]), NMODELS=["bitflippenny=0.05", 'nonoise'],barray=bdl_array,  numpoints=8, HPREF='9XX', ifsave=True,  bar_labels = ['red', 'blue'], bar_colors = ['tab:red', 'tab:blue'])
 #GET_PLOT2(8, NMODEL="bitflippenny=0.05",  numpoints=8, HPREF='9XX')
 
-PLOT_AVG_ITERS_W_STD(np.array([3, 4, 6]), numpoints=8)
+#PLOT_AVG_ITERS_W_STD(np.array([3, 4, 5, 6, 7]), numpoints=8)
 #PLOT_AVG_SUCC(np.array([3, 4, 5, 6, 7, 8]), numpoints=8)
 #CONTOUR_PLOT_AVG_BEST(qubitrange=np.array([3, 4, 5, 6, 7, 8]),NMODEL="bitflippenny=0.05",numpoints=8)
-plt.show()
-
-###missing 0xx4 data pt
+#plt.show()
