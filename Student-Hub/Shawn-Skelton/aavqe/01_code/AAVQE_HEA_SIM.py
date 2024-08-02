@@ -23,7 +23,7 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 ifsave=True
 run_vqe=False
 qubits=8
-HNAME='6XX8'
+HNAME='9XX8'
 print('hamiltonian is', HNAME)
 
 NMODEL='bitflippenny=0.05' #"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
@@ -53,7 +53,7 @@ if device=='sess':
 else:
     script_path = os.path.abspath(__file__)
     #save_path="aavqe/03_data"
-    save_path=script_path.replace("01_code/AAVQE_HEA_SIM.py", "03_data")
+    save_path=script_path.replace("01_code/aavqe_hea_sim.py", "03_data")
                                  
 ###JEFF'S NOISE MODEL CODE###
 def configured_backend():
