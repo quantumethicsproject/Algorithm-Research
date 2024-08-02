@@ -367,7 +367,7 @@ def PLOT_AVG_SUCC(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflipcirq=0
     ax.set_title('Qubit number vs ratio of success')
     plt.show()
 
-def PLOT_AVG_ITERS_W_STD(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=0.05", numpoints=6, Hreflist=['0XX', '1XX', '2XX', '3XX', '4XX', '5XX', '7XX', '8XX', '9XX']):
+def PLOT_AVG_ITERS_W_STD(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=0.05", numpoints=6, Hreflist=['0XX', '1XX', '2XX', '3XX', '4XX', '5XX', '6XX', '7XX', '8XX']):
     fig=plt.figure()
     Nkavgnlist=np.zeros(len(qubitrange))
     Nkstdlist=np.zeros(len(qubitrange))
