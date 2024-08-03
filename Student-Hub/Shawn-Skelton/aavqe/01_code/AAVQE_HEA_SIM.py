@@ -21,12 +21,12 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 
 ####CONSTANTS WHICH THE USER SETS FOR EACH RUN
 ifsave=True
-run_vqe=False
-qubits=8
-HNAME='8XX8'
+run_vqe=True
+qubits=11
+HNAME='0XX11'
 print('hamiltonian is', HNAME)
 
-NMODEL='bitflippenny=0.05' #"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
+NMODEL='nonoise'#'bitflippenny=0.05' #"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
 device='notsess' #'sess'
 numpoints=8
 bdl_array=np.linspace(-1, 1, numpoints)
@@ -338,25 +338,31 @@ for b, bdl in enumerate(bdl_array):
     bdictname='b_'+str(np.around(bdl))+'_data'
 
     if run_vqe==True:
-        KDATA=kandala_VQE(params0all, d, Hvqe=Hit, gradDetect=True, max_iterations=mit*ssteps)
+        KDATA=kandala_VQE(params0all, d, Hvqe=Hit,  max_iterations=mit*ssteps)
         kallenergy=KDATA['energies']
-
-    NKDATA=kandala_VQE(params0all, d, Hvqe=Hit, cost_fc=HEA_cost_fcn_noise, max_iterations=mit*ssteps)
-    Nkits.append(NKDATA['its'])
-    Nkenergy.append(NKDATA['gsEest'])
-    Nkallenergy=NKDATA['energies']
-    print('noisy VQE done', Nkits[-1])
-    
-    
+        
     SDATA, sEplotlist=RUN_AA_VQE(sarray, params0all, d, Hit, H0it, )
-    NSDATA, NsEplotlist=RUN_AA_VQE(sarray, params0all, d, Hit, H0it,  cost_fc=cost_fnAA_noise )
-    print('noisy AAVQE done', NSDATA['fulln'])
-
-    ###SAVE INSTANCE DATA
-    if run_vqe==True:
-        bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
+    
+    if NMODEL!='nonoise':
+        NKDATA=kandala_VQE(params0all, d, Hvqe=Hit, cost_fc=HEA_cost_fcn_noise, max_iterations=mit*ssteps)
+        Nkits.append(NKDATA['its'])
+        Nkenergy.append(NKDATA['gsEest'])
+        Nkallenergy=NKDATA['energies']
+        print('noisy VQE done', Nkits[-1])
+        NSDATA, NsEplotlist=RUN_AA_VQE(sarray, params0all, d, Hit, H0it,  cost_fc=cost_fnAA_noise )
+        ###SAVE INSTANCE DATA
+        if run_vqe==True:
+            bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
+        else:
+            bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA,  'Nkdata': NKDATA}
+    
+        print('noisy AAVQE done', NSDATA['fulln'])
     else:
-        bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA,  'Nkdata': NKDATA}
+        ###SAVE INSTANCE DATA
+        if run_vqe==True:
+            bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'kdata': KDATA}
+        else:
+            bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,}
     
     data[bdictname]=bdict
 
