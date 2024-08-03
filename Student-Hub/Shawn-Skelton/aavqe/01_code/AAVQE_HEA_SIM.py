@@ -23,7 +23,7 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 ifsave=True
 run_vqe=False
 qubits=8
-HNAME='9XX8'
+HNAME='8XX8'
 print('hamiltonian is', HNAME)
 
 NMODEL='bitflippenny=0.05' #"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
