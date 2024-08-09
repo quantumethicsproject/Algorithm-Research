@@ -23,7 +23,7 @@ from abc import ABC, abstractmethod
 # NOISE_MODEL = None
 # NOISE_MODEL = "Bitflip=0.05"
 NOISE_MODEL = "FakeManila"
-eta = 1
+eta = 0.01
 q_delta = 0.001
 n_qubits = 2
 n_shots = 10**4
@@ -509,7 +509,7 @@ def workflow(n_qubits = 2, error =  1.6 * 10**-3, n_shots=10**4):
     }
 
 # %%
-for trial in range(NUM_TRIALS):
+for trial in range(5,5+NUM_TRIALS):
     res = workflow(n_qubits=n_qubits)
     cost_history = res["cost_history"]
     EAD_history = res["EAD_history"]
