@@ -15,11 +15,13 @@ means={'noiseless simulation': [0,10.5, 12,22, 5.875, 8.222222222, 10.81967213, 
        'noisy simulation': [0, 4.5, 6, 24.33333333, 5.25, 8.125, 6.8, 9.766666667],
        'quantum hardware':[2,0,0,2.8,3, 7.285714286, 7.066666667, 10]}
 
+patterns = [ "\\" , "/", "",  "x", "o", "O", ".", "*" ]
+
 
 def NUMPUBLISHED_VS_YEAR_PLOT(yr, publist,ifsave=False):
     plt.figure()
-    plt.bar(yr,publist, label='logical qubits')
-    plt.ylabel('Logical qubits')
+    plt.bar(yr,publist, label='qubits')
+    plt.ylabel('qubits')
     plt.xlabel('Year')
     plt.legend()
     plt.title('Number of VQA Implementations vs Year')
@@ -30,8 +32,8 @@ def NUMPUBLISHED_VS_YEAR_PLOT(yr, publist,ifsave=False):
 
 def MAXREAL_VS_YEAR_PLOT(yr, reallist,ifsave=False):
     plt.figure()
-    plt.bar(yr,reallist, label='logical qubits')
-    plt.ylabel('Logical qubits')
+    plt.bar(yr,reallist, label='qubits', color='tab:orange', hatch=patterns[0])
+    plt.ylabel('qubits')
     plt.xlabel('Year')
     plt.legend()
     plt.title('Largest Quantum Hardware Implementation vs Year')
@@ -39,8 +41,6 @@ def MAXREAL_VS_YEAR_PLOT(yr, reallist,ifsave=False):
         SAVE_PLOT('maxreal_year.pdf')
     else:
         plt.show()
-
-patterns = [ "\\" , "/", "",  "x", "o", "O", ".", "*" ]
 
 def AVG_QUBITS_VS_YEAR_PLOT(yr, means, bar_colors = ['tab:blue', 'mediumseagreen', 'tab:orange'], ifsave=False):
     x=np.arange(len(yr))
@@ -53,7 +53,7 @@ def AVG_QUBITS_VS_YEAR_PLOT(yr, means, bar_colors = ['tab:blue', 'mediumseagreen
         offset=width*multiplier
         ax.bar(x+offset,measure, width, label= attribute, color=bar_colors[multiplier], hatch=patterns[multiplier])
         multiplier +=1
-    ax.set_ylabel('Mean logical qubits')
+    ax.set_ylabel('Mean qubits')
     ax.set_xlabel('Year')
     ax.set_title('Mean Implementation size vs Year')
     ax.set_xticks(x + width, yr)
@@ -73,4 +73,6 @@ def SAVE_PLOT(filename, dev='mac'):
     
     plt.savefig(completename)
     return
-AVG_QUBITS_VS_YEAR_PLOT(yearlist, means, ifsave=True)
+#AVG_QUBITS_VS_YEAR_PLOT(yearlist, means, ifsave=True)
+#NUMPUBLISHED_VS_YEAR_PLOT(yearlist, vqalist, ifsave=True)
+MAXREAL_VS_YEAR_PLOT(yearlist, maxreallist,ifsave=True)

@@ -21,7 +21,7 @@ def DATA_EXTRACT(NMODEL="bitflipcirq=0.05",HNAME='XX3', numpoints=6):
     filename='AAVQE_w_'+NMODEL+'_'+HNAME+'_'+str(numpoints)+'_iads.pkl'
     script_path = os.path.abspath(__file__)
     if dev=='mac':
-        save_path=script_path.replace("01_code/aavqe_plots.py", "03_data")
+        save_path=script_path.replace("01_code/AAVQE_plots.py", "03_data")
     else:
         save_path=script_path.replace("01_code\AAVQE_plots.py", "03_data")
     completename = os.path.join(save_path, filename)
@@ -101,7 +101,7 @@ def GET_PLOT1(guessqubits, barray=bdl_array, NMODELS=["bitflippenny=0.05", 'nono
 
     for m, qubits in enumerate(guessqubits):
         if NMODELS[m]=='nonoise':
-            Z=Z_FCN(np.array([qubits]),barray, NMODELS[m], numpoints=6,HPREF='XX', noisy=False)
+            Z=Z_FCN(np.array([qubits]),barray, NMODELS[m], numpoints=numpoints,HPREF=HPREF, noisy=False)
         else:
             Z=Z_FCN_BEST(np.array([qubits]),barray, NMODELS[m], numpoints,HPREF=HPREF, noisy=True)
         
@@ -167,6 +167,7 @@ def Z_FCN(qubitrange,barray, NMODEL, numpoints, HPREF='XX',  noisy=True):
             args=EXTRACT_ENERGIES(data, bdl, noisy=False)
             
             Z[ q, b]=SUCC_TEST(args[1],args[0], token_val=1)
+            print(args[1][-1],args[0])
             #print(args[2], SUCC_TEST(args[1],args[0], token_val=1))
 
     return Z
@@ -448,11 +449,11 @@ def PLOT_AVG_SUCC(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=
 
 #PLOT_AVG_ITERS_W_STD(np.array([3, 4, 5, 6, 7, 8]), numpoints=8)
 
-GET_PLOT1(np.array([7, 10]), NMODELS=["bitflippenny=0.05", 'nonoise'],barray=bdl_array,  numpoints=8, HPREF='0XX', ifsave=True,  bar_labels = ['red', 'blue'], bar_colors = ['tab:red', 'tab:blue'])
+GET_PLOT1(np.array([7, 12]), NMODELS=["bitflippenny=0.05", 'nonoise'],barray=bdl_array,  numpoints=8, HPREF='2XX', ifsave=False,  bar_labels = ['red', 'blue'], bar_colors = ['tab:red', 'tab:blue'])
 #
 #GET_PLOT2(8, NMODEL="bitflippenny=0.05",  numpoints=8, HPREF='9XX')
 
 #
 #PLOT_AVG_SUCC(np.array([3, 4, 5, 6, 7, 8]), numpoints=8)
 #CONTOUR_PLOT_AVG_BEST(qubitrange=np.array([3, 4, 5, 6, 7, 8]),NMODEL="bitflippenny=0.05",numpoints=8, saveplot=True)
-plt.show()
+#plt.show()

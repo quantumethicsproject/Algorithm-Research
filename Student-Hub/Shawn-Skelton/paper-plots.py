@@ -11,10 +11,10 @@ import json
 patterns = [ "\\" , "/", ""]
 bar_colors = ['tab:blue', 'mediumseagreen', 'tab:orange']
 noiselist=['noiseless', "bit-flip", "FakeManila"]
-aavqelist=[10,8, 3]
+aavqelist=[12,8, 3]
 vqsdlist=[16, 4, 0]
 vqlslist=[5, 5, 0]
-qabomlist=[8, 8, 0]
+qabomlist=[8, 8, 4]
 
 
 def FIGURE1(nmodels, qubits,vqaname='AAVQE', ifsave=False):
@@ -29,7 +29,8 @@ def FIGURE1(nmodels, qubits,vqaname='AAVQE', ifsave=False):
         SAVE_PLOT(filename)
     else:
         plt.show()
-        
+
+
 def FIGURE2(n,cfvals, exactval=0, vqaname='AAVQE', witherror=False, ifsave=False):
     itererror=exactval*np.ones(len(n))-cfvals
     
@@ -79,9 +80,9 @@ def RUN_FIGURE2_VQSD(ifsave=True):
         SAVE_PLOT(filename)
     else:
         plt.show()
-
+RUN_FIGURE2_VQSD(ifsave=True)
 def RUN_FIGURE2_VQLS(ifsave=True):
-    vqaname='VQSA'
+    vqaname='VQLS'
     f=open('benchmarking_data.json')
     data=json.load(f)
     cfvals=data["FakeManila"]['cost_history']
@@ -125,7 +126,8 @@ def RUN_FIGURE2_VQSD(ifsave=True):
     else:
         plt.show()
 
-RUN_FIGURE2_VQSD(ifsave=False)
+#FIGURE1(noiselist, aavqelist, "AAVQE", ifsave=True)
+RUN_FIGURE2_VQLS(ifsave=True)
 
 def RUN_FIGURE2_QABoM(ifsave=False):
     ####get the helliger distance which is the global cost function###
@@ -424,4 +426,6 @@ def RUN_FIGURE2_QABoM(ifsave=False):
     ###Since the Hellinger distance is used as a cost function, the 'ideal' cost function value is 0
     FIGURE2(n, cfvals, exactval=0, vqaname='QABoM', ifsave=ifsave)
     return
+
+#RUN_FIGURE2_QABoM(ifsave=True)
 
