@@ -13,7 +13,7 @@ import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import itertools
-import qiskit.providers.fake_provider as stupid
+#import qiskit.providers.fake_provider as stupid
 
 import problems.useful_fcns as ufs
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
@@ -24,12 +24,12 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 ifsave=True
 run_vqe=True
 
-qubits=3
-HNAME='0XX100'
+qubits=14
+HNAME='0XX14'
 
 print('hamiltonian is', HNAME)
 
-NMODEL="FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
+NMODEL="bitflippenny=0.05""FakeManila"# #"bitflippenny=0.05"#"depolcirq=0.05"
 device='notsess' #'sess'
 numpoints=8
 bdl_array=np.linspace(-1, 1, numpoints)

@@ -11,7 +11,7 @@ import json
 patterns = [ "\\" , "/", ""]
 bar_colors = ['tab:blue', 'mediumseagreen', 'tab:orange']
 noiselist=['noiseless', "bit-flip", "FakeManila"]
-aavqelist=[12,8, 3]
+aavqelist=[13,8, 0]
 vqsdlist=[16, 4, 0]
 vqlslist=[5, 5, 0]
 qabomlist=[8, 8, 4]
@@ -29,7 +29,6 @@ def FIGURE1(nmodels, qubits,vqaname='AAVQE', ifsave=False):
         SAVE_PLOT(filename)
     else:
         plt.show()
-
 
 def FIGURE2(n,cfvals, exactval=0, vqaname='AAVQE', witherror=False, ifsave=False):
     itererror=exactval*np.ones(len(n))-cfvals
@@ -60,27 +59,25 @@ def SAVE_PLOT(filename, dev='mac'):
     plt.savefig(completename)
     return
 
-def RUN_FIGURE2_VQSD(ifsave=True):
-    vqaname='VQSD'
-    f=open('VQSD_2_FakeManila_2.json')
-    data=json.load(f)
-    cfvals=data['cost_history']
-    num_its=data['Iterations to Solution']
+#FIGURE1(noiselist, aavqelist,vqaname='AAVQE', ifsave=True)
+
+def RUN_FIGURE2_AAVQE(ifsave=True):
+    vqaname='AAVQE'
+    numpoints=np.linspace(-1, 1, 8)
+    filename='AAVQE_w_FakeManila_0XX100_'+str(numpoints[6])+'_instance.pkl'
+    with open(filename,'rb') as file:
+        DATA=pickle.load(file)
+   
+    print(DATA['Nsdata'].keys())
+    print()
+    cfvals=DATA['Nsdata']['fullenergy']
+    num_its=DATA['Nsdata']['fulln']
     n=np.linspace(0, num_its-1, num_its)
 
-    fig, ax=plt.subplots(layout='constrained')
-    ax.plot(n, cfvals, label=r'$C(\theta_j)$', color=bar_colors[0])
-    ax.plot(n, data['error_history'], label=r'Error in $C(\theta_j)$', linestyle='dashed', color=bar_colors[1])
-    ax.set_ylabel(r'Cost function $C(\theta_j)$')
-    ax.set_xlabel(vqaname+' iteration step j')
-    ax.legend()
-    plt.title(vqaname+' convergence with FakeManila noise')
-    if ifsave==True:
-        filename=vqaname+'_fakemanila_convergence.pdf'
-        SAVE_PLOT(filename)
-    else:
-        plt.show()
-RUN_FIGURE2_VQSD(ifsave=True)
+    FIGURE2(n,cfvals, exactval=DATA['gsE'], vqaname='AAVQE', witherror=True, ifsave=ifsave)
+    return
+
+
 def RUN_FIGURE2_VQLS(ifsave=True):
     vqaname='VQLS'
     f=open('benchmarking_data.json')
@@ -104,30 +101,31 @@ def RUN_FIGURE2_VQLS(ifsave=True):
     else:
         plt.show()
 
-
-
 def RUN_FIGURE2_VQSD(ifsave=True):
     f=open('VQSD_2_FakeManila_2.json')
     data=json.load(f)
-    cfvals=data['cost_history']
+    
     num_its=data['Iterations to Solution']
-    n=np.linspace(0, num_its-1, num_its)
-
+    cfvals=data['cost_history']
+    
+    n=np.linspace(0, num_its+2, num_its+2)
+    erflist=[0.5700000000000001, 0.53, 0.55, 0.53, 0.54, 0.5700000000000001, 0.49, 0.53, 0.49, 0.48, 0.5, 0.42000000000000004, 0.5, 0.44999999999999996, 0.49, 0.47, 0.51, 0.42000000000000004, 0.45999999999999996, 0.42000000000000004, 0.41000000000000003, 0.44999999999999996, 0.49, 0.45999999999999996, 0.41000000000000003, 0.48, 0.39, 0.39, 0.48, 0.44999999999999996, 0.4, 0.38, 0.36, 0.21999999999999997, 0.45999999999999996, 0.26, 0.31000000000000005, 0.26, 0.30000000000000004, 0.21999999999999997, 0.25, 0.19999999999999996, 0.24, 0.15000000000000002, 0.20999999999999996, 0.10999999999999999, 0.06999999999999995, 0.040000000000000036, 0.06000000000000005, 0.06000000000000005, 0.010000000000000009, 0.0]
+    print(type(erflist))
+    print(type(erflist[0]))
     fig, ax=plt.subplots(layout='constrained')
     ax.plot(n, cfvals, label=r'$C(\theta_j)$', color=bar_colors[0])
-    ax.plot(n, data['error_history'], label=r'Error in $C(\theta_j)$', linestyle='dashed', color=bar_colors[1])
+    ax.plot(np.linspace(0, num_its+1, num_its+1), erflist, label=r'Error in $C(\theta_j)$', linestyle='dashed', color=bar_colors[1])
     ax.set_ylabel(r'Cost function $C(\theta_j)$')
-    ax.set_xlabel(vqaname+' iteration step j')
+    ax.set_xlabel('VQSD'+' iteration step j')
     ax.legend()
-    plt.title(vqaname+' convergence with FakeManila noise')
+    plt.title('VQSD'+' convergence with FakeManila noise')
     if ifsave==True:
-        filename=vqaname+'_fakemanila_convergence.pdf'
+        filename='VQSD'+'_fakemanila_convergence.pdf'
         SAVE_PLOT(filename)
     else:
         plt.show()
 
-#FIGURE1(noiselist, aavqelist, "AAVQE", ifsave=True)
-RUN_FIGURE2_VQLS(ifsave=True)
+RUN_FIGURE2_VQSD(ifsave=True)
 
 def RUN_FIGURE2_QABoM(ifsave=False):
     ####get the helliger distance which is the global cost function###

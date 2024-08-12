@@ -117,9 +117,10 @@ def GET_PLOT1(guessqubits, barray=bdl_array, NMODELS=["bitflippenny=0.05", 'nono
     plt.show()
 
 def GET_PLOT2(guessqubit, barray=bdl_array, NMODEL="bitflipcirq=0.05",  numpoints=6, HPREF='XX',ifsave=False):
+    bar_colors = ['tab:blue', 'mediumseagreen', 'tab:orange']
     Z=Z_FCN_BEST(np.array([guessqubit]),barray, NMODEL, numpoints, HPREF)
     if len(Z[np.where(Z==1)])==0:
-        print('Warning, no AAVQE best solution found for this noise model and'+str(qubits)+' qubits')
+        print('Warning, no AAVQE best solution found for this noise model and'+str(guessqubit)+' qubits')
     else:
       qinds, binds=(np.where(Z==1))
       qind=qinds[-1]
@@ -132,19 +133,29 @@ def GET_PLOT2(guessqubit, barray=bdl_array, NMODEL="bitflipcirq=0.05",  numpoint
     n=NSDATA['fulln']
     E=NSDATA['fullenergy']
     x=np.linspace(0, n, n)
-   
+    
     gsE=binstdict['gsE']
     Edist=gsE*np.ones(len(E))-E
-    plt.plot(x,E , label=r'AAVQE $\braket{E}$')
-    plt.plot(x, Edist, label=r'error in $\braket{E}$', linestyle='dashed')
-    plt.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=1,zorder=0, label=r"$\braket{E}_{real}$")
-    plt.legend()
-    plt.xlabel('AAVQE iteration')
-    plt.ylabel('Energy (Hartrees)')
-    plt.title('AAVQE convergence for '+str(guessqubit)+' qubits and bond length '+str(barray[bind]))
 
+    print('GSE', gsE)
+    print('energy array', E)
+    fig, ax=plt.subplots(layout='constrained')
+    ax.plot(x, E, label=r'$C(\theta_j)$', color=bar_colors[0])
+    #ax.plot(x,E , label=r'AAVQE $\braket{E}$')
+    ax.plot(x, Edist, label=r'Error in $C(\theta_j)$', linestyle='dashed', color=bar_colors[1])
+    plt.axhline(y=gsE,xmin=0,xmax=3,c=bar_colors[2],linewidth=1,zorder=0, label=r"$C(\theta_{ideal})$")
+    #plt.axhline(y=gsE,xmin=0,xmax=3,c="blue",linewidth=1,zorder=0, label=r"$\braket{E}_{real}$")
+    
+    #plt.xlabel('AAVQE iteration')
+    #plt.ylabel('Energy (Hartrees)')
+    ax.set_ylabel(r'Cost function $C(\theta_j)$')
+    ax.set_xlabel('AAVQE'+' iteration step j')
+    #plt.title('AAVQE convergence for '+str(guessqubit)+' qubits and bond length '+str(barray[bind]))
+    plt.title('AAVQE'+' convergence with FakeManila noise')
+    ax.legend()
+    plt.title('AAVQE'+' convergence with FakeManila noise')
     if ifsave==True:
-        SAVE_PLOT('AAVQE_cost_and_sol_'+NMODEL+'.pdf')
+        SAVE_PLOT('AAVQE_fakemanila_convergence.pdf')
     plt.show()
 
 def SAVE_PLOT(filename):
@@ -449,11 +460,17 @@ def PLOT_AVG_SUCC(qubitrange, barray=bdl_array,ctol=c_tol, NMODEL="bitflippenny=
 
 #PLOT_AVG_ITERS_W_STD(np.array([3, 4, 5, 6, 7, 8]), numpoints=8)
 
-GET_PLOT1(np.array([7, 12]), NMODELS=["bitflippenny=0.05", 'nonoise'],barray=bdl_array,  numpoints=8, HPREF='2XX', ifsave=False,  bar_labels = ['red', 'blue'], bar_colors = ['tab:red', 'tab:blue'])
+#GET_PLOT1(np.array([100]), NMODELS=["FakeManila"],barray=bdl_array,  numpoints=8, HPREF='0XX', ifsave=False,  bar_labels = ['red'], bar_colors = ['tab:red'])
 #
-#GET_PLOT2(8, NMODEL="bitflippenny=0.05",  numpoints=8, HPREF='9XX')
-
+#GET_PLOT2(100, NMODEL="FakeManila",  numpoints=8, HPREF='0XX')
+#print(DATA_EXTRACT(NMODEL="FakeManila",HNAME='0XX100', numpoints=8).keys())
 #
+D=DATA_EXTRACT(NMODEL="FakeManila",HNAME='0XX100', numpoints=8)
+bdict=D['b_-1.0_data']
+print(bdict['Nsdata'].keys())
+print(bdict['Nsdata']['fulln'])
+#print(bdict['Nsdata']['fullenergy'])
+print(bdict['Nsdata']['fulltimes'])
 #PLOT_AVG_SUCC(np.array([3, 4, 5, 6, 7, 8]), numpoints=8)
 #CONTOUR_PLOT_AVG_BEST(qubitrange=np.array([3, 4, 5, 6, 7, 8]),NMODEL="bitflippenny=0.05",numpoints=8, saveplot=True)
 #plt.show()
