@@ -21,10 +21,10 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 ####CONSTANTS WHICH THE USER SETS FOR EACH RUN
 ifsave=True
 run_vqe=False
-qubits=10
-HNAME='0XX10'
-NMODEL='bitflippenny=0.05'#"FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
-device='sess'
+qubits=3
+HNAME='0XX13'
+NMODEL="FakeManila" #"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
+device='mac'
 numpoints=8
 bdl_array=np.linspace(-1, 1, numpoints)
 #bdl_array=np.array([qubits])
@@ -185,7 +185,7 @@ def cost_fnAA(param, H=Hdef, H0=H0def, s=sdef):
     H: the hamiltonian required
     """ 
     HEA_circuit(param, range(qubits), d)
-    return qml.expval((1-s)*H0+s*H)    
+    return qml.expval(qml.simplify(float(1-s)*H0+float(s)*H))
 
 @qml.qnode(dev_N, interface="autograd")
 def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef): 
@@ -205,7 +205,7 @@ def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef):
     else:
         print('warning, noise model not recognized')
 
-    return qml.expval((1-s)*H0+s*H)
+    return qml.expval(qml.simplify(float(1-s)*H0+float(s)*H))
 
 ####VQE SOLVERS
 def kandala_VQE(param0, d, Hvqe=Hdef, cost_fc=HEA_cost_fcn, systsz=qubits, max_iterations=mit, conv_tol=ctol):
@@ -364,3 +364,6 @@ if ifsave==True:
     completename = os.path.join(save_path, filename) 
     with open(completename,'wb') as file:
         pickle.dump(data, file)
+
+if device=='mac':
+    os.system('afplay /System/Library/Sounds/Sosumi.aiff')

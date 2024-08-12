@@ -9,10 +9,11 @@ from pennylane import numpy as np
 import time
 import pickle
 import os.path
+import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import itertools
-from qiskit.providers.fake_provider import *
+import qiskit.providers.fake_provider as stupid
 
 import problems.useful_fcns as ufs
 '''FANCY PREAMBLE TO MAKE BRAKET PACKAGE WORK NICELY'''
@@ -22,12 +23,14 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 ####CONSTANTS WHICH THE USER SETS FOR EACH RUN
 ifsave=True
 run_vqe=False
-qubits=2
-HNAME='0XX0'
+qubits=3
+HNAME='0XX101'
+print('hamiltonian is', HNAME)
+
 NMODEL="FakeManila"#"bitflippenny=0.05" #"bitflippenny=0.05"#"depolcirq=0.05"
-device='notsess'
-numpoints=8
-bdl_array=np.linspace(-1, 1, numpoints)
+device='notsess' #'sess'
+numpoints=4
+bdl_array=np.linspace(-1, -0.1428571428571428, numpoints)
 #bdl_array=np.array([qubits])
 # available_data = qml.data.list_datasets()["qchem"][mol]["STO-3G"]
 # bdl_array=available_data[1:2]
@@ -50,12 +53,16 @@ if device=='sess':
     save_path=script_path.replace("01_code\\AAVQE_HEA_SIM.py", "03_data")
 else:
     script_path = os.path.abspath(__file__)
-    save_path="aavqe/03_data"
+    #save_path="aavqe/03_data"
 
+#save_path=script_path.replace("01_code/AAVQE_HEA_SIM.py", "03_data")
+save_path=script_path.replace("01_code/aavqe_hea_sim.py", "03_data")
+#save_path = "aavqe/03_data"
+                                 
 ###JEFF'S NOISE MODEL CODE###
 def configured_backend():
     # backend = provider.get_backend("ibm_osaka") # uncomment this line to use a real IBM device
-    backend = FakeManila()
+    backend = stupid.FakeManila()
     # backend.options.update_options(...)
     return backend
 
@@ -186,7 +193,9 @@ def cost_fnAA(param, H=Hdef, H0=H0def, s=sdef):
     H: the hamiltonian required
     """ 
     HEA_circuit(param, range(qubits), d)
-    return qml.expval((1-s)*H0+s*H)    
+    #print('type of s', type(float(s)))
+    return qml.expval(qml.simplify(float(1-s)*H0+float(s)*H))    
+    #return qml.expval(0.3*H0)
 
 @qml.qnode(dev_N, interface="autograd")
 def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef): 
@@ -205,8 +214,9 @@ def cost_fnAA_noise(param, H=Hdef, H0=H0def, s=sdef):
         return qml.expval((1-s)*H0+s*H)
     else:
         print('warning, noise model not recognized')
-
-    return qml.expval((1-s)*H0+s*H)
+    
+    #return qml.expval(H0)
+    return qml.expval(float(1-s)*H0+float(s)*H)
 
 ####VQE SOLVERS
 def kandala_VQE(param0, d, Hvqe=Hdef, cost_fc=HEA_cost_fcn, systsz=qubits, max_iterations=mit, conv_tol=ctol):
@@ -332,25 +342,31 @@ for b, bdl in enumerate(bdl_array):
     bdictname='b_'+str(np.around(bdl))+'_data'
 
     if run_vqe==True:
-        KDATA=kandala_VQE(params0all, d, Hvqe=Hit, gradDetect=True, max_iterations=mit*ssteps)
+        KDATA=kandala_VQE(params0all, d, Hvqe=Hit,  max_iterations=mit*ssteps)
         kallenergy=KDATA['energies']
-
-    NKDATA=kandala_VQE(params0all, d, Hvqe=Hit, cost_fc=HEA_cost_fcn_noise, max_iterations=mit*ssteps)
-    Nkits.append(NKDATA['its'])
-    Nkenergy.append(NKDATA['gsEest'])
-    Nkallenergy=NKDATA['energies']
-    print('noisy VQE done', Nkits[-1])
-    
-    
+        
     SDATA, sEplotlist=RUN_AA_VQE(sarray, params0all, d, Hit, H0it, )
-    NSDATA, NsEplotlist=RUN_AA_VQE(sarray, params0all, d, Hit, H0it,  cost_fc=cost_fnAA_noise )
-    print('noisy AAVQE done', NSDATA['fulln'])
-
-    ###SAVE INSTANCE DATA
-    if run_vqe==True:
-        bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
+    
+    if NMODEL!='nonoise':
+        NKDATA=kandala_VQE(params0all, d, Hvqe=Hit, cost_fc=HEA_cost_fcn_noise, max_iterations=mit*ssteps)
+        Nkits.append(NKDATA['its'])
+        Nkenergy.append(NKDATA['gsEest'])
+        Nkallenergy=NKDATA['energies']
+        print('noisy VQE done', Nkits[-1])
+        NSDATA, NsEplotlist=RUN_AA_VQE(sarray, params0all, d, Hit, H0it,  cost_fc=cost_fnAA_noise )
+        ###SAVE INSTANCE DATA
+        if run_vqe==True:
+            bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA, 'kdata': KDATA, 'Nkdata': NKDATA}
+        else:
+            bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA,  'Nkdata': NKDATA}
+    
+        print('noisy AAVQE done', NSDATA['fulln'])
     else:
-        bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'Nsdata': NSDATA,  'Nkdata': NKDATA}
+        ###SAVE INSTANCE DATA
+        if run_vqe==True:
+            bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,'kdata': KDATA}
+        else:
+            bdict={'bdl':bdl, 'gsE': gsE, 'hamiltonian': Hit, 'sdata': SDATA,}
     
     data[bdictname]=bdict
 
@@ -365,3 +381,4 @@ if ifsave==True:
     completename = os.path.join(save_path, filename) 
     with open(completename,'wb') as file:
         pickle.dump(data, file)
+os.system('afplay /System/Library/Sounds/Sosumi.aiff')
