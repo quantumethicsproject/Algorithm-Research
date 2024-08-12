@@ -22,17 +22,17 @@ plt.rc('text.latex', preamble=r'\usepackage{braket}')
 
 ####CONSTANTS WHICH THE USER SETS FOR EACH RUN
 ifsave=True
-run_vqe=True
 
-qubits=14
-HNAME='0XX14'
+run_vqe=False
+qubits=3
+HNAME='0XX101'
 
 print('hamiltonian is', HNAME)
 
 NMODEL="bitflippenny=0.05""FakeManila"# #"bitflippenny=0.05"#"depolcirq=0.05"
 device='notsess' #'sess'
-numpoints=8
-bdl_array=np.linspace(-1, 1, numpoints)
+numpoints=4
+bdl_array=np.linspace(-1, -0.1428571428571428, numpoints)
 #bdl_array=np.array([qubits])
 # available_data = qml.data.list_datasets()["qchem"][mol]["STO-3G"]
 # bdl_array=available_data[1:2]
